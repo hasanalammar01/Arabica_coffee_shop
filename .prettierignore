@@ -1,0 +1,9 @@
+assets/
+public/
+.next/
+.shots/
+.playwright-mcp/
+data/menu.ts
+AGENTS.md
+CLAUDE.md
+package-lock.json

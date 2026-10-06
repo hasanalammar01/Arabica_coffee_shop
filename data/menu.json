@@ -1,0 +1,292 @@
+{
+  "categories": [
+    {
+      "name": "Hot Drinks",
+      "items": [
+        {
+          "name": "Espresso",
+          "price": 90000,
+          "image": "/menu/espresso.webp"
+        },
+        {
+          "name": "Cappuccino",
+          "price": 315000,
+          "image": "/menu/cappuccino.webp"
+        },
+        {
+          "name": "Caffè Latte",
+          "price": 360000,
+          "image": "/menu/caffe-latte.webp"
+        },
+        {
+          "name": "Hot Chocolate",
+          "price": 390000,
+          "image": "/menu/hot-chocolate.webp"
+        },
+        {
+          "name": "Special Tea",
+          "price": 200000,
+          "image": "/menu/special-tea.webp",
+          "options": [
+            "Spanish White Peach & Ginger",
+            "Moroccan Pomegranate & Safflower",
+            "Austrian Apple, Cinnamon & Vanilla",
+            "German Chamomile & Lemon Balm",
+            "Oregon Spearmint & Peppermint"
+          ]
+        },
+        {
+          "name": "Double Espresso",
+          "price": 120000
+        },
+        {
+          "name": "Americano",
+          "price": 100000
+        },
+        {
+          "name": "Tea Box",
+          "price": 120000
+        },
+        {
+          "name": "Nescafé",
+          "price": 270000
+        },
+        {
+          "name": "Caramel Macchiato",
+          "price": 400000
+        }
+      ]
+    },
+    {
+      "name": "Shakes",
+      "items": [
+        {
+          "name": "Chocolate",
+          "price": 450000,
+          "image": "/menu/shake-chocolate.webp"
+        },
+        {
+          "name": "Strawberry",
+          "price": 450000,
+          "image": "/menu/shake-strawberry.webp"
+        },
+        {
+          "name": "Caramel",
+          "price": 450000,
+          "image": "/menu/shake-caramel.webp"
+        },
+        {
+          "name": "Mango",
+          "price": 450000,
+          "image": "/menu/shake-mango.webp"
+        }
+      ]
+    },
+    {
+      "name": "Smoothies",
+      "items": [
+        {
+          "name": "Mango Passion",
+          "price": 400000,
+          "image": "/menu/smoothie-mango-passion.webp"
+        },
+        {
+          "name": "Kiwi Apple",
+          "price": 400000,
+          "image": "/menu/smoothie-kiwi-apple.webp"
+        },
+        {
+          "name": "Mix Berries",
+          "price": 450000,
+          "image": "/menu/smoothie-mix-berries.webp"
+        },
+        {
+          "name": "Mint Lemonade",
+          "price": 400000
+        },
+        {
+          "name": "Strawberry Lychee",
+          "price": 400000
+        },
+        {
+          "name": "Piña Colada",
+          "price": 400000
+        },
+        {
+          "name": "Blueberry Mango",
+          "price": 400000
+        },
+        {
+          "name": "Mango Strawberry",
+          "price": 400000
+        },
+        {
+          "name": "Cotton Candy",
+          "price": 400000
+        }
+      ]
+    },
+    {
+      "name": "Cold Drinks",
+      "items": [
+        {
+          "name": "Iced Latte",
+          "price": 400000,
+          "image": "/menu/iced-latte.webp"
+        },
+        {
+          "name": "Caramel Frappé",
+          "price": 400000,
+          "image": "/menu/caramel-frappe.webp"
+        },
+        {
+          "name": "Cappuccino Freddo",
+          "price": 315000,
+          "image": "/menu/cappuccino-freddo.webp"
+        },
+        {
+          "name": "Iced Americano",
+          "price": 120000,
+          "image": "/menu/iced-americano.webp"
+        },
+        {
+          "name": "Espresso Freddo",
+          "price": 120000
+        },
+        {
+          "name": "Frappé Coffee",
+          "price": 200000
+        },
+        {
+          "name": "Chocolate Frappé",
+          "price": 400000
+        },
+        {
+          "name": "Homemade Iced Tea",
+          "price": 270000,
+          "options": ["Peach", "Lemon", "Raspberry"]
+        },
+        {
+          "name": "Dark Blue",
+          "price": 180000
+        },
+        {
+          "name": "BoomBoom",
+          "price": 205000
+        },
+        {
+          "name": "Pacha",
+          "price": 250000
+        },
+        {
+          "name": "Rim Sparkling",
+          "price": 120000
+        },
+        {
+          "name": "Soft Drinks",
+          "price": 150000,
+          "options": ["Pepsi", "Pepsi Diet", "7UP", "Mirinda"]
+        }
+      ]
+    },
+    {
+      "name": "Dessert",
+      "items": [
+        {
+          "name": "Brownies",
+          "price": 400000,
+          "image": "/menu/brownies.webp"
+        },
+        {
+          "name": "Cheesecake",
+          "price": 270000
+        },
+        {
+          "name": "Cake",
+          "price": 270000
+        },
+        {
+          "name": "Custard",
+          "price": 120000
+        },
+        {
+          "name": "Nuts",
+          "price": 250000
+        }
+      ]
+    },
+    {
+      "name": "Saj",
+      "items": [
+        {
+          "name": "Zaatar",
+          "price": 120000
+        },
+        {
+          "name": "Cheese",
+          "price": 230000
+        },
+        {
+          "name": "Cocktail",
+          "price": 200000
+        },
+        {
+          "name": "Turkey & Cheese",
+          "price": 375000
+        },
+        {
+          "name": "Labneh",
+          "price": 180000
+        },
+        {
+          "name": "Labneh & Makdous",
+          "price": 200000
+        },
+        {
+          "name": "Bandoura & Basal",
+          "price": 200000
+        },
+        {
+          "name": "Nutella",
+          "price": 200000
+        },
+        {
+          "name": "Nutella & Banana",
+          "price": 200000
+        },
+        {
+          "name": "Add Cheese",
+          "price": 100000,
+          "addon": true
+        },
+        {
+          "name": "Khodra (vegetables)",
+          "price": 70000,
+          "addon": true
+        }
+      ]
+    },
+    {
+      "name": "Shisha",
+      "items": [
+        {
+          "name": "Mouassal",
+          "price": 400000
+        },
+        {
+          "name": "Gold",
+          "price": 360000
+        },
+        {
+          "name": "Ajami",
+          "price": 500000
+        },
+        {
+          "name": "Add Ras (extra head)",
+          "price": 200000,
+          "addon": true
+        }
+      ]
+    }
+  ]
+}
