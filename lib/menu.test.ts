@@ -49,7 +49,10 @@ test("empty admin fields are dropped and sizes win over price", () => {
 test("empty sections are hidden; broken items fail with every problem listed", () => {
   assert.equal(buildMenu([{ name: "Soon", items: [] }]).length, 0);
   assert.throws(
-    () => buildMenu([{ name: "Saj", items: [{ name: "", tags: ["tasty"], image: "/menu/nope.webp" }] }]),
+    () =>
+      buildMenu([{ name: "Saj", items: [{ name: "", tags: ["tasty"], image: "/menu/nope.webp" }] }], {
+        imageExists: () => false,
+      }),
     (e: Error) =>
       ["missing a name", "needs a price", 'unknown tag "tasty"', "not found in /public"].every((m) =>
         e.message.includes(m),

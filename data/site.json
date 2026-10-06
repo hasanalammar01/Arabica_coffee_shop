@@ -1,0 +1,26 @@
+{
+  "name": "Arabica deli-café",
+  "url": "https://arabica-cafe.vercel.app",
+  "timeZone": "Asia/Beirut",
+  "description": "Arabica deli-café: espresso and iced coffee, shakes and smoothies, saj from the griddle, desserts and shisha.",
+  "address": "",
+  "mapsQuery": "",
+  "phone": "",
+  "whatsapp": "",
+  "email": "",
+  "instagram": "",
+  "hours": [
+    {
+      "days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "open": "08:00",
+      "close": "00:00"
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 /**
- * Shop details. Anything left undefined is simply hidden on the site.
- * TODO: fill in everything marked TODO before going live.
+ * Shop details. The values live in data/site.json, edited in the admin under
+ * "Shop info". Empty fields are hidden on the site.
+ * TODO before going live: real `url` (also used by the QR code), address, contacts and hours
+ * (the hours in site.json are a placeholder).
  */
+import data from "./site.json" with { type: "json" };
 
 export type Hours = {
   /** 0 = Sunday … 6 = Saturday */
@@ -11,34 +14,37 @@ export type Hours = {
   close: string;
 };
 
-export type Site = {
+/** site.json as stored: unset text fields are "". */
+export type SiteData = {
   name: string;
   url: string;
   timeZone: string;
   description: string;
-  address?: string;
-  /** What to search on Google Maps (address or exact place name). */
-  mapsQuery?: string;
-  /** International format, digits only after +, e.g. "+96171123456". */
-  phone?: string;
-  whatsapp?: string;
-  email?: string;
-  instagram?: string;
-  hours?: Hours[];
+  address: string;
+  /** A Google Maps link, or a place/address to search for. */
+  mapsQuery: string;
+  /** International format, e.g. "+961 71 123 456". */
+  phone: string;
+  whatsapp: string;
+  email: string;
+  /** Full URL, e.g. "https://instagram.com/arabica". */
+  instagram: string;
+  hours: Hours[];
 };
 
+type Optional = "address" | "mapsQuery" | "phone" | "whatsapp" | "email" | "instagram";
+export type Site = Omit<SiteData, Optional> & Partial<Pick<SiteData, Optional>>;
+
+const blank = (v: string) => v.trim() || undefined;
+
+export const siteData = data as SiteData;
+
 export const site: Site = {
-  name: "Arabica deli-café",
-  url: "https://arabica-cafe.vercel.app", // TODO: real domain (also used by the QR code)
-  timeZone: "Asia/Beirut",
-  description:
-    "Arabica deli-café: espresso and iced coffee, shakes and smoothies, saj from the griddle, desserts and shisha.",
-  address: undefined, // TODO: "Street, area, city, Lebanon"
-  mapsQuery: undefined, // TODO
-  phone: undefined, // TODO
-  whatsapp: undefined, // TODO
-  email: undefined, // TODO
-  instagram: undefined, // TODO: "https://instagram.com/..."
-  // TODO: PLACEHOLDER hours, replace with the real ones.
-  hours: [{ days: [0, 1, 2, 3, 4, 5, 6], open: "08:00", close: "00:00" }],
+  ...siteData,
+  address: blank(siteData.address),
+  mapsQuery: blank(siteData.mapsQuery),
+  phone: blank(siteData.phone),
+  whatsapp: blank(siteData.whatsapp),
+  email: blank(siteData.email),
+  instagram: blank(siteData.instagram),
 };

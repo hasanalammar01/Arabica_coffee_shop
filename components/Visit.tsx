@@ -2,9 +2,11 @@ import { site } from "@/data/site";
 import { formatDays, formatTime } from "@/lib/hours";
 import { OpenStatus } from "./OpenStatus";
 
-export const mapsLink = site.mapsQuery
-  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.mapsQuery)}`
-  : undefined;
+/** mapsQuery is either a pasted Google Maps link or a place name to search for. */
+export const mapsIsLink = /^https?:\/\//.test(site.mapsQuery ?? "");
+export const mapsLink = mapsIsLink
+  ? site.mapsQuery
+  : site.mapsQuery && `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.mapsQuery)}`;
 
 const digits = (n: string) => n.replace(/[^\d]/g, "");
 
@@ -43,7 +45,7 @@ export function ContactActions() {
             href={a.href}
             {...(a.href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" })}
             className={`inline-flex min-h-11 items-center rounded-full px-5 font-medium transition-colors ${
-              i === 0 ? "bg-zaatar text-on-zaatar hover:bg-ink" : "border border-line hover:border-ink"
+              i === 0 ? "bg-espresso text-on-espresso hover:bg-ink" : "border border-line hover:border-ink"
             }`}
           >
             {a.label}

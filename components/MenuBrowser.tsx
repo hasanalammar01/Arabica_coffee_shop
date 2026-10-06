@@ -97,7 +97,7 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
                 type="button"
                 aria-pressed={tag === t}
                 onClick={() => setTag(tag === t ? null : t)}
-                className="min-h-11 rounded-full border border-line px-4 text-sm aria-pressed:border-zaatar aria-pressed:bg-zaatar aria-pressed:text-on-zaatar"
+                className="min-h-11 rounded-full border border-line px-4 text-sm aria-pressed:border-espresso aria-pressed:bg-espresso aria-pressed:text-on-espresso"
               >
                 {TAG_LABELS[t]}
               </button>
@@ -117,7 +117,7 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
                 href={`#${c.id}`}
                 data-chip={c.id}
                 aria-current={active === c.id ? "true" : undefined}
-                className="flex min-h-11 items-center rounded-full px-4 whitespace-nowrap text-muted transition-colors hover:text-ink aria-[current=true]:bg-zaatar aria-[current=true]:text-on-zaatar"
+                className="flex min-h-11 items-center rounded-full px-4 whitespace-nowrap text-muted transition-colors hover:text-ink aria-[current=true]:bg-espresso aria-[current=true]:text-on-espresso"
               >
                 {c.name}
               </a>
@@ -133,7 +133,7 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
             <button
               type="button"
               onClick={() => (setQuery(""), setTag(null))}
-              className="mt-6 min-h-11 rounded-full bg-zaatar px-6 text-on-zaatar"
+              className="mt-6 min-h-11 rounded-full bg-espresso px-6 text-on-espresso"
             >
               Show the full menu
             </button>
@@ -208,7 +208,7 @@ function MenuRow({ item, small = false }: { item: MenuItem; small?: boolean }) {
             <li
               key={t}
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                t === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-saffron-text"
+                t === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-caramel"
               }`}
             >
               {TAG_LABELS[t]}

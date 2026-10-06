@@ -26,33 +26,33 @@ export default function Home() {
 
   return (
     <>
-      <section className="tile text-on-zaatar">
+      <section className="tile text-on-espresso">
         <div className="mx-auto grid max-w-6xl gap-x-12 px-4 pt-12 sm:px-6 lg:grid-cols-2 lg:pt-20">
-          <Logo className="w-48 animate-rise text-saffron sm:w-60 lg:col-start-2 lg:row-start-1 lg:w-full lg:max-w-md lg:self-center lg:justify-self-end" />
+          <Logo className="w-48 animate-rise text-crema sm:w-60 lg:col-start-2 lg:row-start-1 lg:w-full lg:max-w-md lg:self-center lg:justify-self-end" />
           <div className="mt-8 lg:col-start-1 lg:row-start-1 lg:mt-0">
             <h1 className="max-w-[14ch] animate-rise font-display text-hero [animation-delay:80ms]">
               Coffee at the counter, saj off the griddle.
             </h1>
-            <p className="mt-5 max-w-md animate-rise text-lg text-on-zaatar-muted [animation-delay:160ms]">
+            <p className="mt-5 max-w-md animate-rise text-lg text-on-espresso-muted [animation-delay:160ms]">
               Espresso and iced lattes, shakes and smoothies, saj, desserts and shisha.
             </p>
             <div className="mt-8 flex animate-rise flex-wrap gap-3 [animation-delay:240ms]">
               <Link
                 href="/menu"
-                className="inline-flex min-h-12 items-center rounded-full bg-saffron px-6 font-medium text-ink transition-colors hover:bg-on-zaatar"
+                className="inline-flex min-h-12 items-center rounded-full bg-crema px-6 font-medium text-ink transition-colors hover:bg-on-espresso"
               >
                 View the menu
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex min-h-12 items-center rounded-full border border-on-zaatar/40 px-6 font-medium transition-colors hover:border-on-zaatar"
+                className="inline-flex min-h-12 items-center rounded-full border border-on-espresso/40 px-6 font-medium transition-colors hover:border-on-espresso"
               >
                 Find us
               </Link>
             </div>
           </div>
 
-          {/* The shelf: drinks standing on a saffron rail. */}
+          {/* The shelf: drinks standing on a beige rail. */}
           <div className="mt-12 lg:col-span-2 lg:mt-16" aria-hidden>
             <div className="flex items-end justify-center gap-1 sm:gap-4 lg:justify-between lg:px-8">
               {SHELF.map((d, i) => (
@@ -67,7 +67,7 @@ export default function Home() {
                 />
               ))}
             </div>
-            <div className="h-1.5 rounded-full bg-saffron" />
+            <div className="h-1.5 rounded-full bg-crema" />
             <div className="h-10 lg:h-14" />
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function Home() {
             <li key={c.id} className="border-b border-line">
               <Link
                 href={`/menu#${c.id}`}
-                className="group flex min-h-16 items-center gap-4 py-4 transition-colors hover:text-saffron-text"
+                className="group flex min-h-16 items-center gap-4 py-4 transition-colors hover:text-caramel"
               >
                 <span className="font-display text-2xl sm:text-3xl">{c.name}</span>
                 <span className="hidden text-sm text-muted sm:inline">{c.items.length} items</span>
@@ -112,7 +112,7 @@ export default function Home() {
           </p>
           <Link
             href="/about"
-            className="inline-flex min-h-11 items-center font-medium text-saffron-text underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center font-medium text-caramel underline-offset-4 hover:underline"
           >
             More about us
           </Link>

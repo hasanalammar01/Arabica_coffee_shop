@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Readex_Pro, Young_Serif } from "next/font/google";
 import Script from "next/script";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { scriptJson } from "@/lib/script-json";
 import { site } from "@/data/site";
 import "./globals.css";
@@ -20,8 +18,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f3ec" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1712" },
+    { media: "(prefers-color-scheme: light)", color: "#f6f0e7" },
+    { media: "(prefers-color-scheme: dark)", color: "#17110d" },
   ],
 };
 
@@ -57,15 +55,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-dvh flex-col font-sans antialiased">
         <a
           href="#main"
-          className="sr-only z-50 rounded-full bg-zaatar px-4 py-3 text-on-zaatar focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+          className="sr-only z-50 rounded-full bg-espresso px-4 py-3 text-on-espresso focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Skip to content
         </a>
-        <Header />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        {children}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: scriptJson(jsonLd) }} />
         {/* Offline support for the menu: the service worker caches pages as they're visited. */}
         {process.env.NODE_ENV === "production" && (

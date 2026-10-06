@@ -3,7 +3,7 @@ public/
 .next/
 .shots/
 .playwright-mcp/
-data/menu.ts
+data/*.json
 AGENTS.md
 CLAUDE.md
 package-lock.json

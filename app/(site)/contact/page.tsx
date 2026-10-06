@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Visit } from "@/components/Visit";
+import { mapsIsLink, Visit } from "@/components/Visit";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -12,7 +12,8 @@ export default function Contact() {
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-14">
       <Visit headingLevel="h1" />
-      {site.mapsQuery && (
+      {/* Shared links (maps.app.goo.gl/…) can't be embedded, only searches can. */}
+      {site.mapsQuery && !mapsIsLink && (
         <iframe
           title={`Map showing ${site.name}`}
           src={`https://www.google.com/maps?q=${encodeURIComponent(site.mapsQuery)}&output=embed`}

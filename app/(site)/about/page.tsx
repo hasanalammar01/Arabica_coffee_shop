@@ -32,7 +32,7 @@ export default function About() {
           </p>
           <Link
             href="/menu"
-            className="inline-flex min-h-12 items-center rounded-full bg-zaatar px-6 font-medium text-on-zaatar hover:bg-ink"
+            className="inline-flex min-h-12 items-center rounded-full bg-espresso px-6 font-medium text-on-espresso hover:bg-ink"
           >
             See the full menu
           </Link>

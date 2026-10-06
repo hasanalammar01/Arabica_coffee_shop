@@ -8,10 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/*.test.ts",
+    "test": "node --test lib/*.test.ts lib/admin/*.test.ts",
     "format": "prettier --write .",
-    "qr": "node scripts/qr.mjs",
-    "cms": "decap-server"
+    "qr": "node scripts/qr.mjs"
   },
   "dependencies": {
     "next": "16.3.8",
@@ -23,7 +22,6 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "decap-server": "^3.11.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "prettier": "^3",

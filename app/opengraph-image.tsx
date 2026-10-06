@@ -9,7 +9,7 @@ export const contentType = "image/png";
 export default function OpenGraphImage() {
   const logo = readFileSync(join(process.cwd(), "public/logo.svg"), "utf8").replace(
     'fill="currentColor"',
-    'fill="#d6a23e"',
+    'fill="#e3cfb2"',
   );
   return new ImageResponse(
     <div
@@ -21,8 +21,8 @@ export default function OpenGraphImage() {
         alignItems: "center",
         justifyContent: "center",
         gap: 40,
-        background: "#233d2e",
-        color: "#f2f3ec",
+        background: "#4a3426",
+        color: "#ffffff",
         fontSize: 40,
       }}
     >

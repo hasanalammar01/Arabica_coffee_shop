@@ -26,14 +26,14 @@
         {
           "name": "Special Tea",
           "price": 200000,
-          "image": "/menu/special-tea.webp",
           "options": [
             "Spanish White Peach & Ginger",
             "Moroccan Pomegranate & Safflower",
             "Austrian Apple, Cinnamon & Vanilla",
             "German Chamomile & Lemon Balm",
             "Oregon Spearmint & Peppermint"
-          ]
+          ],
+          "image": "/menu/special-tea.webp"
         },
         {
           "name": "Double Espresso",
@@ -164,7 +164,11 @@
         {
           "name": "Homemade Iced Tea",
           "price": 270000,
-          "options": ["Peach", "Lemon", "Raspberry"]
+          "options": [
+            "Peach",
+            "Lemon",
+            "Raspberry"
+          ]
         },
         {
           "name": "Dark Blue",
@@ -185,7 +189,12 @@
         {
           "name": "Soft Drinks",
           "price": 150000,
-          "options": ["Pepsi", "Pepsi Diet", "7UP", "Mirinda"]
+          "options": [
+            "Pepsi",
+            "Pepsi Diet",
+            "7UP",
+            "Mirinda"
+          ]
         }
       ]
     },

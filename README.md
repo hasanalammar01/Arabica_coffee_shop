@@ -11,27 +11,30 @@ npm run lint && npm run typecheck && npm test
 
 ## Edit the menu: the admin at `/admin`
 
-Staff add, edit, reorder and remove **sections** and **items** at `https://your-domain/admin`, in a simple form editor (Decap CMS). Each item has a name, a price in L.L, and optional description, photo, flavours/choices, sizes, tags and an "extra / add-on" switch. Clicking **Publish** saves the menu, and the live site updates about a minute later.
+Staff manage the menu at `https://your-domain/admin`, a dashboard built from the approved Figma design ("Staff dashboard design"):
 
-- Sections and items can be dragged to reorder them. A new section stays hidden until it has at least one item.
-- Tags (`Vegan`, `New`…) turn on the filter buttons on the menu page automatically.
-- If a published change can't be shown (for example an item with no price), the site **keeps the previous menu**, and the build log on Vercel/Netlify lists exactly what to fix.
+- **Menu items:** search, add, edit, duplicate, move up/down and delete items. Each item has a name, a price in L.L (or prices by size), and optional description, photo, flavours/choices, tags and an "add-on" switch, with a live preview.
+- **Sections:** rename, reorder, add and delete sections. A section with items can't be deleted, and a new section stays hidden on the site until it has an item.
+- **Shop info:** address, Google Maps link, phone, WhatsApp, Instagram, email and opening hours (`data/site.json`).
+
+Clicking **Publish** saves one commit to GitHub (menu and any new photo together), and the live site updates about a minute later. Before publishing, the admin checks the whole menu (every item needs a name and a price) and explains what to fix. If someone else published in the meantime, it stops and asks you to reload instead of overwriting their work. Uploaded photos are resized to 800px WebP in the browser, so a phone photo of several MB becomes about 100 KB.
+
+Tags (`Vegan`, `New`…) turn on the filter buttons on the public menu automatically.
 
 ### Try it on your computer
 
 ```bash
-npm run dev      # terminal 1
-npm run cms      # terminal 2: lets /admin edit the local files, no login
+npm run dev
 ```
 
-Open http://localhost:3000/admin, click **Login**, edit, and **Publish**. Changes are written to `data/menu.json` (photos go to `public/menu/`) and appear on http://localhost:3000/menu straight away.
+Open http://localhost:3000/admin and click **Edit files on this computer** (only shown while developing; no login). **Publish** writes to `data/menu.json` / `data/site.json` (photos go to `public/menu/`) and http://localhost:3000/menu updates straight away. Nothing is sent to GitHub until you commit.
 
 ### Go live (one-time setup)
 
 Editors sign in with a **GitHub account**. Every change is saved as a commit, so nothing is ever lost and any change can be undone.
 
 1. Put this project in a GitHub repository and deploy it on Vercel or Netlify from that repository.
-2. The admin is already pointed at `hasanalammar01/Arabica_coffee_shop` on branch `main` (`REPO` in `public/admin/index.html`). Change it there if the repository moves.
+2. The admin is already pointed at `hasanalammar01/Arabica_coffee_shop` on branch `main` (`REPO` and `BRANCH` in `lib/admin/backend.ts`). Change them there if the repository moves.
 3. On GitHub, go to **Settings → Developer settings → OAuth Apps → New OAuth App**:
    - Homepage URL: `https://your-domain`
    - Authorization callback URL: `https://your-domain/api/decap/callback`
@@ -63,13 +66,13 @@ The original PDF left these unclear. They are on the site as printed, so check a
 
 ## Shop details and opening hours
 
-Edit **`data/site.ts`**: address, Google Maps search, phone, WhatsApp, email, Instagram, hours and the site's domain. Anything left `undefined` is hidden on the site. Hours use 24h time, and a closing time earlier than the opening time means "after midnight":
+Edit them in the admin under **Shop info**, or by hand in **`data/site.json`** (also holds the site's domain, `url`). Empty fields are hidden on the site. The Google Maps field takes a pasted link (opens directly) or a place name (also shows an embedded map on the contact page). Hours use 24h time, days are 0 = Sunday … 6 = Saturday, and a closing time earlier than the opening time means "after midnight":
 
-```ts
-hours: [
-  { days: [1, 2, 3, 4, 5], open: "08:00", close: "23:00" }, // Monday–Friday
-  { days: [6, 0], open: "10:00", close: "01:00" },          // Saturday–Sunday, until 1am
-],
+```json
+"hours": [
+  { "days": [1, 2, 3, 4, 5], "open": "08:00", "close": "23:00" },
+  { "days": [6, 0], "open": "10:00", "close": "01:00" }
+]
 ```
 
 "Open now / Closed now" is calculated in the visitor's browser using Beirut time (`timeZone`).
@@ -82,7 +85,7 @@ Fonts are loaded in `app/layout.tsx` with `next/font` (Young Serif for headings,
 
 ## Images
 
-- Menu photos live in `public/menu/` (WebP or PNG; transparent cut-outs look best on the green panels). Upload them in the admin, or reference them from `data/menu.json`. Next.js resizes and converts them automatically.
+- Menu photos live in `public/menu/` (WebP or PNG; transparent cut-outs look best on the brown tiles). Upload them in the admin, or reference them from `data/menu.json`. Next.js resizes and converts them automatically.
 - The photos currently on the site were extracted from the PDF and are about 250px wide. Higher-resolution versions (800px+) will look sharper on phones.
 - The logo is `public/logo.svg` (full) and `public/logo-mark.svg` (Arabic only), extracted from the PDF as vectors.
 - `public/arabica-menu.pdf` is the "Download PDF menu" file. Replace it whenever the printed menu changes, or remove the button in `app/menu/page.tsx`.
@@ -90,11 +93,11 @@ Fonts are loaded in `app/layout.tsx` with `next/font` (Young Serif for headings,
 ## QR code
 
 ```bash
-npm run qr                                   # uses site.url from data/site.ts + /menu
+npm run qr                                   # uses url from data/site.json + /menu
 npm run qr -- https://your-domain.com/menu   # or any URL
 ```
 
-Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px). Set the real domain in `data/site.ts` first.
+Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px). Set the real domain (`url` in `data/site.json`) first.
 
 ## Analytics (off by default)
 
@@ -105,16 +108,21 @@ Set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=your-domain.com` in the hosting dashboard to t
 - **Vercel:** import the repository, no settings needed.
 - **Netlify:** import the repository; it detects Next.js automatically.
 
-After the first deploy, set `url` in `data/site.ts` to the live domain (used for SEO, the sitemap and the QR code) and redeploy.
+After the first deploy, set `url` in `data/site.json` to the live domain (used for SEO, the sitemap and the QR code) and redeploy.
 
 ## What's where
 
 ```
-app/            pages: home, menu, about, contact (Visit), 404, error, loading; SEO files; api/decap (admin login)
-components/     MenuBrowser (search, filters, scroll-spy), DrinkCard, Price, Visit, OpenStatus, Header, Footer, Logo
-data/           menu.json (edited via /admin), menu.ts (types), site.ts (shop details)
-lib/            menu validation, opening-hours logic (+ tests), price formatting
-public/         images, logo, PDF, service worker (offline menu), QR code, admin/ (menu editor)
+app/(site)/     public pages: home, menu, about, contact (Visit), error, loading
+app/admin/      staff dashboard page and its styles (admin.css, scoped under .admin)
+app/api/        decap/* = GitHub sign-in for the admin; admin/local = local editing (dev only)
+app/            root layout, 404, SEO files (sitemap, robots, share image, icon)
+components/     public site: MenuBrowser, DrinkCard, Price, Visit, OpenStatus, Header, Footer, Logo
+components/admin/  dashboard screens: AdminApp, MenuItems, ItemEditor, Sections, ShopInfo, ui
+data/           menu.json + site.json (edited via /admin), menu.ts + site.ts (types)
+lib/            menu validation (menu-core.ts runs in the browser too), opening hours, formatting, tests
+lib/admin/      draft <-> JSON conversion, photo resizing, GitHub/local publishing (+ tests)
+public/         images, logo, PDF, service worker (offline menu), QR code
 assets/         original PDF and raw extracted images (not served)
 scripts/qr.mjs  QR code generator
 ```
