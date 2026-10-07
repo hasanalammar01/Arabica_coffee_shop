@@ -101,7 +101,7 @@ npm run qr                                   # uses url from data/site.json + /m
 npm run qr -- https://your-domain.com/menu   # or any URL
 ```
 
-Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px). Set the real domain (`url` in `data/site.json`) first.
+Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px). No QR code is published yet on purpose: generate it only once the final domain is set (`url` in `data/site.json`), because printed codes can't be changed later.
 
 ## Analytics (off by default)
 
