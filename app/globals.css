@@ -37,6 +37,14 @@
       transform: translateY(14px);
     }
   }
+  /* The "what's in it" tab under a menu item. */
+  --animate-tab: tab 200ms ease-out both;
+  @keyframes tab {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {

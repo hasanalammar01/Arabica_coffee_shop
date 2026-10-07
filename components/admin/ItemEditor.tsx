@@ -220,12 +220,15 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 </Field>
               )}
             </div>
-            <Field label="Description" hint={`Optional · ${item.description.length}/140`}>
+            <Field
+              label="What's in it"
+              hint={`Optional · guests see it when they tap the item · ${item.description.length}/140`}
+            >
               <textarea
                 value={item.description}
                 onChange={(e) => update({ description: e.target.value })}
                 maxLength={140}
-                placeholder="Describe the item briefly"
+                placeholder="e.g. Double espresso, steamed milk and caramel sauce"
               />
             </Field>
             <div className="upload-row">
@@ -468,9 +471,10 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                   <b>{previewPrice}</b>
                 </div>
               )}
-              {item.description && <p>{item.description}</p>}
               {item.options.length > 0 && <p>{item.options.join(" · ")}</p>}
               <Tags values={item.tags} addon={item.addon} />
+              {/* Shown open here; on the menu it opens when guests tap the item. */}
+              {item.description && <p className="preview-tab">{item.description}</p>}
             </div>
           </div>
         </aside>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MenuCategory, MenuItem, Tag } from "@/data/menu";
 import { DrinkCard } from "./DrinkCard";
+import { InfoArrow, ItemInfo } from "./ItemInfo";
 import { Price } from "./Price";
 
 const TAG_LABELS: Record<Tag, string> = {
@@ -194,28 +195,32 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
 
 function MenuRow({ item, small = false }: { item: MenuItem; small?: boolean }) {
   return (
-    <li className={`break-inside-avoid ${small ? "py-2" : "py-3"}`}>
-      <div className="flex items-baseline gap-3">
-        <h3 className={`min-w-0 ${small ? "" : "text-[1.0625rem] font-medium"}`}>{item.name}</h3>
-        <span className="leader" aria-hidden />
-        <Price prices={item.prices} />
-      </div>
-      {item.description && <p className="mt-1 text-sm text-muted">{item.description}</p>}
-      {item.options && <p className="mt-1 text-sm text-muted">{item.options.join(" · ")}</p>}
-      {item.tags && item.tags.length > 0 && (
-        <ul className="mt-2 flex gap-1.5" aria-label="Tags">
-          {item.tags.map((t) => (
-            <li
-              key={t}
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                t === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-caramel"
-              }`}
-            >
-              {TAG_LABELS[t]}
-            </li>
-          ))}
-        </ul>
-      )}
+    <li className="break-inside-avoid">
+      <ItemInfo description={item.description} className={`-mx-2 px-2 ${small ? "py-2" : "py-3"}`}>
+        <div className="flex items-baseline gap-3">
+          <h3 className={`min-w-0 ${small ? "" : "text-[1.0625rem] font-medium"}`}>
+            {item.name}
+            {item.description && <InfoArrow />}
+          </h3>
+          <span className="leader" aria-hidden />
+          <Price prices={item.prices} />
+        </div>
+        {item.options && <p className="mt-1 text-sm text-muted">{item.options.join(" · ")}</p>}
+        {item.tags && item.tags.length > 0 && (
+          <ul className="mt-2 flex gap-1.5" aria-label="Tags">
+            {item.tags.map((t) => (
+              <li
+                key={t}
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  t === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-caramel"
+                }`}
+              >
+                {TAG_LABELS[t]}
+              </li>
+            ))}
+          </ul>
+        )}
+      </ItemInfo>
     </li>
   );
 }

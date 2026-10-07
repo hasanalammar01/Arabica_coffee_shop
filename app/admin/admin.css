@@ -1098,6 +1098,28 @@
     line-height: 1.5;
     margin: 8px 0 12px;
   }
+  /* Same "what's in it" tab guests see when they tap an item. */
+  & .live-preview > .preview-tab {
+    position: relative;
+    margin: 14px 0 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 13px;
+  }
+  & .live-preview > .preview-tab::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 20px;
+    width: 12px;
+    height: 12px;
+    transform: rotate(45deg);
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
   & .bottom-actions {
     position: sticky;
     z-index: 10;
