@@ -60,7 +60,10 @@ const contents = (path: string, ref: string) =>
 
 /** File text, plus its version (blob sha) so a later publish can detect conflicts. */
 export async function readText(path: string): Promise<{ text: string; sha: string | null }> {
-  if (mode() === "local") return { text: await readFile(join(process.cwd(), path), "utf8"), sha: null };
+  // Local mode only runs in `npm run dev`; the ignore comment stops the production build
+  // from bundling the whole project into this function to cover the computed path.
+  if (mode() === "local")
+    return { text: await readFile(join(/*turbopackIgnore: true*/ process.cwd(), path), "utf8"), sha: null };
   const f = await contents(path, BRANCH);
   return { text: Buffer.from(f.content, "base64").toString("utf8"), sha: f.sha };
 }
@@ -76,7 +79,11 @@ export async function publish(
   base: Record<string, string>,
 ): Promise<Record<string, string>> {
   if (mode() === "local") {
-    for (const f of files) await writeFile(join(process.cwd(), f.path), Buffer.from(f.content, "base64"));
+    for (const f of files)
+      await writeFile(
+        join(/*turbopackIgnore: true*/ process.cwd(), f.path),
+        Buffer.from(f.content, "base64"),
+      );
     return {};
   }
 
