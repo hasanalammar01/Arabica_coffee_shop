@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { MenuCategoryData } from "@/data/menu";
 import type { SiteData } from "@/data/site";
 import {
-  githubBackend,
-  localBackend,
-  signInWithGitHub,
+  connect,
+  getSession,
+  signIn as startSession,
+  signOut as endSession,
   type Backend,
   type FileChange,
+  type Mode,
 } from "@/lib/admin/backend";
 import {
   newKey,
@@ -23,10 +25,7 @@ import { ItemEditor, type Destination } from "./ItemEditor";
 import { MenuItems } from "./MenuItems";
 import { Sections } from "./Sections";
 import { ShopInfo } from "./ShopInfo";
-import { Button, FullLogo, Icon, Logo, Toast, type IconName } from "./ui";
-
-const TOKEN_KEY = "arabica-admin-token";
-const isDev = process.env.NODE_ENV === "development";
+import { FullLogo, Icon, Logo, Toast, type IconName } from "./ui";
 
 type Screen = "items" | "editor" | "sections" | "shop";
 export type Editing = { item: DraftItem; sectionKey: string; isNew: boolean; afterKey?: string };
@@ -36,7 +35,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function AdminApp() {
   const [backend, setBackend] = useState<Backend | null>(null);
-  const [status, setStatus] = useState<"signed-out" | "loading" | "ready">("signed-out");
+  const [status, setStatus] = useState<"checking" | "signed-out" | "loading" | "ready">("checking");
   const [authError, setAuthError] = useState("");
   const [sections, setSections] = useState<DraftSection[]>([]);
   const [site, setSite] = useState<SiteData | null>(null);
@@ -58,11 +57,12 @@ export function AdminApp() {
     return () => removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const open = async (connect: () => Promise<Backend>) => {
+  /** Loads the latest menu and shop info, then shows the dashboard. */
+  const open = useCallback(async (mode: Mode | null) => {
     setStatus("loading");
     setAuthError("");
     try {
-      const b = await connect();
+      const b = connect(mode);
       const [menu, siteData] = await Promise.all([
         b.loadJson<{ categories: MenuCategoryData[] }>("data/menu.json"),
         b.loadJson<SiteData>("data/site.json"),
@@ -72,22 +72,35 @@ export function AdminApp() {
       setBackend(b);
       setStatus("ready");
     } catch (e) {
-      sessionStorage.removeItem(TOKEN_KEY);
+      setAuthError(errorText(e));
+      setStatus("signed-out");
+    }
+  }, []);
+
+  // Still signed in from earlier (12-hour session)? Go straight to the dashboard.
+  useEffect(() => {
+    getSession()
+      .then((s) => (s.signedIn ? open(s.mode) : setStatus("signed-out")))
+      .catch((e) => {
+        setAuthError(errorText(e));
+        setStatus("signed-out");
+      });
+  }, [open]);
+
+  const signIn = async (password: string) => {
+    setStatus("loading");
+    setAuthError("");
+    try {
+      await startSession(password);
+      await open((await getSession()).mode);
+    } catch (e) {
       setAuthError(errorText(e));
       setStatus("signed-out");
     }
   };
 
-  const signIn = () =>
-    open(async () => {
-      // Reuse this tab's sign-in after a reload; otherwise open the GitHub popup.
-      const token = sessionStorage.getItem(TOKEN_KEY) ?? (await signInWithGitHub());
-      sessionStorage.setItem(TOKEN_KEY, token);
-      return githubBackend(token);
-    });
-
-  const signOut = () => {
-    sessionStorage.removeItem(TOKEN_KEY);
+  const signOut = async () => {
+    await endSession().catch(() => {});
     setBackend(null);
     setStatus("signed-out");
     setScreen("items");
@@ -160,10 +173,10 @@ export function AdminApp() {
   if (status !== "ready" || !backend || !site)
     return (
       <SignIn
+        checking={status === "checking"}
         loading={status === "loading"}
         error={authError}
         onSignIn={signIn}
-        onLocal={isDev ? () => open(async () => localBackend) : undefined}
       />
     );
 
@@ -227,37 +240,52 @@ function insertAt(
 }
 
 function SignIn({
+  checking,
   loading,
   error,
   onSignIn,
-  onLocal,
 }: {
+  checking: boolean;
   loading: boolean;
   error: string;
-  onSignIn: () => void;
-  onLocal?: () => void;
+  onSignIn: (password: string) => void;
 }) {
+  const [password, setPassword] = useState("");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (password) onSignIn(password);
+  };
   return (
     <main id="main" className="sign-in">
-      <section className="sign-in-card">
+      <form className="sign-in-card" onSubmit={submit}>
         <FullLogo />
         <h1>Menu admin</h1>
-        <p>{loading ? "Loading the menu…" : "Sign in to edit the Arabica menu."}</p>
+        <p>{checking || loading ? "Loading the menu…" : "Sign in to edit the Arabica menu."}</p>
         {error && (
           <span className="error-text" role="alert">
             {error}
           </span>
         )}
-        <Button icon="github" onClick={onSignIn} disabled={loading}>
-          Sign in with GitHub
-        </Button>
-        {onLocal && (
-          <Button variant="secondary" onClick={onLocal} disabled={loading}>
-            Edit files on this computer
-          </Button>
+        {!checking && (
+          <>
+            <label className="field">
+              <span className="field-label">Password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoFocus
+              />
+            </label>
+            <button type="submit" className="button primary" disabled={loading || !password}>
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+            <small>Ask the owner for the admin password.</small>
+          </>
         )}
-        <small>Ask the owner to add your GitHub account if you can&apos;t sign in.</small>
-      </section>
+      </form>
     </main>
   );
 }

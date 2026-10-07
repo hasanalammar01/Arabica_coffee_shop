@@ -28,8 +28,7 @@ export type IconName =
   | "eye"
   | "close"
   | "clock"
-  | "trash"
-  | "github";
+  | "trash";
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -96,12 +95,6 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       </>
     ),
     trash: <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" />,
-    github: (
-      <>
-        <path d="M15 22v-4c.1-1-.4-2-1-2.5 3 0 6-1.5 6-6A4.6 4.6 0 0 0 18.8 6 4.3 4.3 0 0 0 18.7 2S17.7 1.7 15 3.5a13.4 13.4 0 0 0-7 0C5.3 1.7 4.3 2 4.3 2A4.3 4.3 0 0 0 4.2 6 4.6 4.6 0 0 0 3 9.5c0 4.5 3 6 6 6-.6.5-1 1.4-1 2.5v4" />
-        <path d="M8 19c-3 .9-3-1.5-4-2" />
-      </>
-    ),
   };
   return (
     <svg

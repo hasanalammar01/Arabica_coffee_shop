@@ -27,19 +27,23 @@ Tags (`Vegan`, `New`…) turn on the filter buttons on the public menu automatic
 npm run dev
 ```
 
-Open http://localhost:3000/admin and click **Edit files on this computer** (only shown while developing; no login). **Publish** writes to `data/menu.json` / `data/site.json` (photos go to `public/menu/`) and http://localhost:3000/menu updates straight away. Nothing is sent to GitHub until you commit.
+Open http://localhost:3000/admin. With no `ADMIN_PASSWORD` set, it opens without a login and **Publish** writes straight to `data/menu.json` / `data/site.json` (photos go to `public/menu/`), so http://localhost:3000/menu updates right away. Nothing is sent to GitHub until you commit.
 
 ### Go live (one-time setup)
 
-Editors sign in with a **GitHub account**. Every change is saved as a commit, so nothing is ever lost and any change can be undone.
+Staff sign in with **one shared password**; they don't need a GitHub account. When they publish, the website itself saves the change to this GitHub repository using a key that only the server knows. Every change is a commit, so nothing is ever lost and any change can be undone.
 
-1. Put this project in a GitHub repository and deploy it on Vercel or Netlify from that repository.
-2. The admin is already pointed at `hasanalammar01/Arabica_coffee_shop` on branch `main` (`REPO` and `BRANCH` in `lib/admin/backend.ts`). Change them there if the repository moves.
-3. On GitHub, go to **Settings → Developer settings → OAuth Apps → New OAuth App**:
-   - Homepage URL: `https://your-domain`
-   - Authorization callback URL: `https://your-domain/api/decap/callback`
-4. In the hosting dashboard, add the environment variables `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` from that OAuth app (see `.env.example`), then redeploy.
-5. Invite each editor's GitHub account to the repository (**Settings → Collaborators**, write access).
+1. Deploy the repository on Vercel (Import → `hasanalammar01/Arabica_coffee_shop`).
+2. Create the website's GitHub key: GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   - Repository access: **Only select repositories** → `Arabica_coffee_shop`.
+   - Permissions: **Contents → Read and write** (nothing else).
+   - Expiration: pick a date and set a reminder; when it expires, publishing stops with a clear message until you paste a new token.
+3. In Vercel → Project → **Settings → Environment Variables**, add (see `.env.example`):
+   - `ADMIN_PASSWORD`: the staff password. Use a long one (four or more random words). Changing it signs everyone out.
+   - `GITHUB_TOKEN`: the key from step 2.
+4. Redeploy (Vercel → Deployments → ⋯ → Redeploy) so the new variables take effect.
+
+The repository and branch are set in `lib/admin/store.ts` (`REPO`, `BRANCH`).
 
 ### Editing the file directly
 
@@ -115,13 +119,13 @@ After the first deploy, set `url` in `data/site.json` to the live domain (used f
 ```
 app/(site)/     public pages: home, menu, about, contact (Visit), error, loading
 app/admin/      staff dashboard page and its styles (admin.css, scoped under .admin)
-app/api/        decap/* = GitHub sign-in for the admin; admin/local = local editing (dev only)
+app/api/admin/  session (password sign-in) and files (read/publish menu files)
 app/            root layout, 404, SEO files (sitemap, robots, share image, icon)
 components/     public site: MenuBrowser, DrinkCard, Price, Visit, OpenStatus, Header, Footer, Logo
 components/admin/  dashboard screens: AdminApp, MenuItems, ItemEditor, Sections, ShopInfo, ui
 data/           menu.json + site.json (edited via /admin), menu.ts + site.ts (types)
 lib/            menu validation (menu-core.ts runs in the browser too), opening hours, formatting, tests
-lib/admin/      draft <-> JSON conversion, photo resizing, GitHub/local publishing (+ tests)
+lib/admin/      draft <-> JSON conversion, photo resizing (+ tests); auth.ts + store.ts run on the server
 public/         images, logo, PDF, service worker (offline menu), QR code
 assets/         original PDF and raw extracted images (not served)
 scripts/qr.mjs  QR code generator
