@@ -24,10 +24,10 @@ export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLa
         aria-label={`${d.brand}, ${d.nav.home}`}
       >
         <Logo variant="mark" className="h-7 w-auto" />
-        <span className="hidden font-display text-lg text-ink min-[380px]:inline">{lang === "ar" ? "أرابيكا" : "Arabica"}</span>
+        <span className="hidden font-display text-lg text-ink min-[440px]:inline">{lang === "ar" ? "أرابيكا" : "Arabica"}</span>
       </Link>
       <nav aria-label={d.nav.main}>
-        <ul className="flex items-center text-[0.95rem] sm:gap-1">
+        <ul className="flex items-center text-[0.8125rem] min-[440px]:text-[0.95rem] sm:gap-1">
           {links.map(({ href: to, label }) => {
             const current = path === to || path.startsWith(`${to}/`);
             return (
@@ -35,7 +35,7 @@ export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLa
                 <Link
                   href={to}
                   aria-current={current ? "page" : undefined}
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full px-2.5 text-muted transition-colors hover:text-ink aria-[current=page]:bg-surface aria-[current=page]:text-ink sm:px-3"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full px-1.5 text-muted transition-colors hover:text-ink aria-[current=page]:bg-surface aria-[current=page]:text-ink min-[440px]:px-2.5 sm:px-3"
                 >
                   {label}
                 </Link>
@@ -47,7 +47,7 @@ export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLa
               href={publicPath(lang === "ar" ? "en" : "ar", path)}
               lang={lang === "ar" ? "en" : "ar"}
               hrefLang={lang === "ar" ? "en" : "ar"}
-              className="ms-1 flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line px-3 text-sm font-medium hover:border-ink"
+              className="ms-1 flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line px-2 text-sm font-medium hover:border-ink min-[440px]:px-3"
             >
               {d.otherLang}
             </a>
