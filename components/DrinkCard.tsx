@@ -25,7 +25,7 @@ export function DrinkCard({
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <article className={`menu-reveal group ${soldOut ? "opacity-60" : ""}`}>
+    <article className={`menu-reveal group flex min-w-0 items-center gap-2 sm:block [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}>
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${t(lang).menu.details}`}
@@ -56,7 +56,7 @@ export function DrinkCard({
           </div>
         </div>
       </ItemInfo>
-      {action}
+      {action && <div className="sm:mt-3 sm:flex sm:justify-end">{action}</div>}
     </article>
   );
 }

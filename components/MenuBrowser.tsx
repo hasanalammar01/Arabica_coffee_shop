@@ -5,6 +5,9 @@ import type { MenuCategory, MenuItem, Tag } from "@/data/menu";
 import { pick, t, type Lang } from "@/lib/i18n";
 import { DrinkCard } from "./DrinkCard";
 import { InfoHint, ItemInfo, ItemInfoGroup, itemDetails, SoldOut } from "./ItemInfo";
+import { AddToCart } from "./order/AddToCart";
+import { CartBar } from "./order/CartBar";
+import { useOrdering, type OrderingConfig } from "./order/cart";
 import { Price } from "./Price";
 
 const hasImage = (i: MenuItem): i is MenuItem & { image: string } => Boolean(i.image);
@@ -15,6 +18,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
   const [tag, setTag] = useState<Tag | null>(null);
   const [active, setActive] = useState(menu[0]?.id);
   const bar = useRef<HTMLUListElement>(null);
+  const ordering = useOrdering();
 
   // Dietary filter only appears once the menu actually has tags.
   const tags = useMemo(() => [...new Set(menu.flatMap((c) => c.items.flatMap((i) => i.tags ?? [])))], [menu]);
@@ -168,7 +172,13 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               {photos.length > 0 && (
                 <div className="mt-6 grid items-start gap-4 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-5 print:grid-cols-4">
                   {photos.map((i, ii) => (
-                    <DrinkCard key={i.id} item={i} lang={lang} priority={ci === 0 && ii < 2} />
+                    <DrinkCard
+                      key={i.id}
+                      item={i}
+                      lang={lang}
+                      priority={ci === 0 && ii < 2}
+                      action={<AddToCart item={i} lang={lang} ordering={ordering} />}
+                    />
                   ))}
                 </div>
               )}
@@ -176,7 +186,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               {rows.length > 0 && (
                 <ul className="mt-6 lg:columns-2 lg:gap-x-16">
                   {rows.map((i) => (
-                    <MenuRow key={i.id} item={i} lang={lang} />
+                    <MenuRow key={i.id} item={i} lang={lang} ordering={ordering} />
                   ))}
                 </ul>
               )}
@@ -184,7 +194,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               {addons.length > 0 && (
                 <ul className="mt-2 border-t border-dashed border-line pt-2 text-sm text-muted lg:w-1/2 lg:pe-8">
                   {addons.map((i) => (
-                    <MenuRow key={i.id} item={i} lang={lang} small />
+                    <MenuRow key={i.id} item={i} lang={lang} ordering={ordering} small />
                   ))}
                 </ul>
               )}
@@ -192,17 +202,28 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
           );
         })}
       </div>
+      <CartBar menu={menu} lang={lang} ordering={ordering} />
     </ItemInfoGroup>
   );
 }
 
-function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; small?: boolean }) {
+function MenuRow({
+  item,
+  lang,
+  ordering,
+  small = false,
+}: {
+  item: MenuItem;
+  lang: Lang;
+  ordering: OrderingConfig | null;
+  small?: boolean;
+}) {
   const d = t(lang);
   const details = itemDetails(item, lang);
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <li className={`menu-reveal break-inside-avoid ${soldOut ? "opacity-60" : ""}`}>
+    <li className={`menu-reveal flex break-inside-avoid items-start gap-2 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}>
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${d.menu.details}`}
@@ -233,6 +254,9 @@ function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; sm
         )}
         {details && <InfoHint lang={lang} />}
       </ItemInfo>
+      <span className={small ? "pt-1" : "pt-2"}>
+        <AddToCart item={item} lang={lang} ordering={ordering} />
+      </span>
     </li>
   );
 }

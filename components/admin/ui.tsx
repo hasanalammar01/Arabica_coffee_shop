@@ -30,7 +30,11 @@ export type IconName =
   | "eye"
   | "close"
   | "clock"
-  | "trash";
+  | "trash"
+  | "bag"
+  | "chart"
+  | "card"
+  | "settings";
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -97,6 +101,25 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       </>
     ),
     trash: <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" />,
+    bag: (
+      <>
+        <path d="M5 8h14l-1 12H6L5 8Z" />
+        <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+      </>
+    ),
+    chart: <path d="M4 20h16M7 16v-5M12 16V6M17 16v-8" />,
+    card: (
+      <>
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <path d="M3 10h18M7 15h3" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+      </>
+    ),
   };
   return (
     <svg
@@ -241,10 +264,12 @@ export function Modal({ children, onClose }: { children: ReactNode; onClose: () 
 }
 
 export function PageHeader({
+  eyebrow = "Menu",
   title,
   description,
   actions,
 }: {
+  eyebrow?: string;
   title: string;
   description: string;
   actions?: ReactNode;
@@ -252,7 +277,7 @@ export function PageHeader({
   return (
     <header className="page-header">
       <div>
-        <span className="eyebrow">Menu</span>
+        <span className="eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>

@@ -1,16 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { MenuCategoryData } from "@/data/menu";
 import type { SiteData } from "@/data/site";
 import {
   connect,
+  getOrders,
   getSession,
+  setOrderStatus,
   signIn as startSession,
   signOut as endSession,
   type Backend,
   type FileChange,
   type Mode,
+  type OrdersOverview,
 } from "@/lib/admin/backend";
 import {
   newKey,
@@ -22,13 +25,16 @@ import {
   type DraftSection,
 } from "@/lib/admin/draft";
 import { buildMenu, slugify } from "@/lib/menu-core";
+import type { OrderStatus } from "@/lib/orders-core";
 import { ItemEditor, type Destination } from "./ItemEditor";
 import { MenuItems } from "./MenuItems";
+import { NoDatabase, OrdersScreen, StatsScreen } from "./Orders";
 import { Sections } from "./Sections";
+import { PaymentsScreen, SettingsScreen } from "./Settings";
 import { ShopInfo } from "./ShopInfo";
 import { FullLogo, Icon, Logo, Toast, type IconName } from "./ui";
 
-type Screen = "items" | "editor" | "sections" | "shop";
+type Screen = "items" | "editor" | "sections" | "shop" | "orders" | "stats" | "payments" | "settings";
 export type Editing = { item: DraftItem; sectionKey: string; isNew: boolean; afterKey?: string };
 export type Publish = (next: DraftSection[], message: string) => Promise<void>;
 
@@ -44,6 +50,8 @@ export function AdminApp() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [notice, setNotice] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [ordersDb, setOrdersDb] = useState(false);
+  const orders = useOrders(status === "ready" && ordersDb);
 
   // Each screen opens at the top.
   useEffect(() => {
@@ -59,7 +67,7 @@ export function AdminApp() {
   }, [dirty]);
 
   /** Loads the latest menu and shop info, then shows the dashboard. */
-  const open = useCallback(async (mode: Mode | null) => {
+  const open = useCallback(async ({ mode, orders: db }: { mode: Mode | null; orders: boolean }) => {
     setStatus("loading");
     setAuthError("");
     try {
@@ -71,6 +79,7 @@ export function AdminApp() {
       setSections(toDraft(menu.categories));
       setSite(siteData);
       setBackend(b);
+      setOrdersDb(db);
       setStatus("ready");
     } catch (e) {
       setAuthError(errorText(e));
@@ -81,19 +90,19 @@ export function AdminApp() {
   // Still signed in from earlier (12-hour session)? Go straight to the dashboard.
   useEffect(() => {
     getSession()
-      .then((s) => (s.signedIn ? open(s.mode) : setStatus("signed-out")))
+      .then((s) => (s.signedIn ? open(s) : setStatus("signed-out")))
       .catch((e) => {
         setAuthError(errorText(e));
         setStatus("signed-out");
       });
   }, [open]);
 
-  const signIn = async (password: string) => {
+  const signIn = async (username: string, password: string) => {
     setStatus("loading");
     setAuthError("");
     try {
-      await startSession(password);
-      await open((await getSession()).mode);
+      await startSession(username, password);
+      await open(await getSession());
     } catch (e) {
       setAuthError(errorText(e));
       setStatus("signed-out");
@@ -198,7 +207,7 @@ export function AdminApp() {
   };
 
   return (
-    <AppShell screen={screen} go={go} user={backend.user} onSignOut={signOut}>
+    <AppShell screen={screen} go={go} user={backend.user} onSignOut={signOut} newOrders={orders.data?.newOrders ?? 0}>
       {notice && <Toast message={notice} onClose={() => setNotice("")} />}
       {screen === "items" && (
         <MenuItems
@@ -225,6 +234,18 @@ export function AdminApp() {
       )}
       {screen === "sections" && <Sections sections={sections} publish={publish} setDirty={setDirty} />}
       {screen === "shop" && <ShopInfo site={site} onPublish={publishSite} setDirty={setDirty} />}
+      {ORDER_SCREENS.includes(screen) && !ordersDb ? (
+        <div className="page narrow-page">
+          <NoDatabase />
+        </div>
+      ) : (
+        <>
+          {screen === "orders" && <OrdersScreen data={orders.data} error={orders.error} onStatus={orders.setStatus} />}
+          {screen === "stats" && <StatsScreen data={orders.data} error={orders.error} />}
+          {screen === "payments" && <PaymentsScreen setDirty={setDirty} onSaved={setNotice} />}
+          {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} />}
+        </>
+      )}
     </AppShell>
   );
 }
@@ -254,18 +275,19 @@ function SignIn({
   checking: boolean;
   loading: boolean;
   error: string;
-  onSignIn: (password: string) => void;
+  onSignIn: (username: string, password: string) => void;
 }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (password) onSignIn(password);
+    if (username && password) onSignIn(username, password);
   };
   return (
     <main id="main" className="sign-in">
       <form className="sign-in-card" onSubmit={submit}>
         <FullLogo />
-        <h1>Menu admin</h1>
+        <h1>Arabica admin</h1>
         <p>{checking || loading ? "Loading the menu…" : "Sign in to edit the Arabica menu."}</p>
         {error && (
           <span className="error-text" role="alert">
@@ -275,6 +297,17 @@ function SignIn({
         {!checking && (
           <>
             <label className="field">
+              <span className="field-label">Username</span>
+              <input
+                autoComplete="username"
+                autoCapitalize="none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                autoFocus
+              />
+            </label>
+            <label className="field">
               <span className="field-label">Password</span>
               <input
                 type="password"
@@ -282,13 +315,12 @@ function SignIn({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                autoFocus
               />
             </label>
-            <button type="submit" className="button primary" disabled={loading || !password}>
+            <button type="submit" className="button primary" disabled={loading || !username || !password}>
               {loading ? "Signing in…" : "Sign in"}
             </button>
-            <small>Ask the owner for the admin password.</small>
+            <small>First time? The username is &ldquo;admin&rdquo; until it&apos;s changed in Settings.</small>
           </>
         )}
       </form>
@@ -301,19 +333,35 @@ function AppShell({
   go,
   user,
   onSignOut,
+  newOrders,
   children,
 }: {
   screen: Screen;
   go: (to: Screen) => boolean;
   user: Backend["user"];
   onSignOut: () => void;
+  newOrders: number;
   children: ReactNode;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
-  const nav: { id: Screen; label: string; icon: IconName }[] = [
-    { id: "items", label: "Menu items", icon: "menu" },
-    { id: "sections", label: "Sections", icon: "sections" },
-    { id: "shop", label: "Shop info", icon: "shop" },
+  const nav: { group: string; items: { id: Screen; label: string; icon: IconName; badge?: number }[] }[] = [
+    {
+      group: "Menu",
+      items: [
+        { id: "items", label: "Menu items", icon: "menu" },
+        { id: "sections", label: "Sections", icon: "sections" },
+        { id: "shop", label: "Shop info", icon: "shop" },
+      ],
+    },
+    {
+      group: "Online orders",
+      items: [
+        { id: "orders", label: "Orders", icon: "bag", badge: newOrders },
+        { id: "stats", label: "Statistics", icon: "chart" },
+        { id: "payments", label: "Payment methods", icon: "card" },
+      ],
+    },
+    { group: "Admin", items: [{ id: "settings", label: "Settings", icon: "settings" }] },
   ];
   const active = screen === "editor" ? "items" : screen;
   const initials = user.name
@@ -329,7 +377,7 @@ function AppShell({
           <Logo />
           <div>
             <strong>Arabica</strong>
-            <small>Menu admin</small>
+            <small>Admin</small>
           </div>
           <button
             type="button"
@@ -341,17 +389,23 @@ function AppShell({
           </button>
         </div>
         <nav aria-label="Dashboard navigation">
-          {nav.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              className={active === item.id ? "active" : ""}
-              aria-current={active === item.id ? "page" : undefined}
-              onClick={() => go(item.id) && setMobileNav(false)}
-            >
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </button>
+          {nav.map(({ group, items }) => (
+            <div key={group} className="nav-group">
+              <small>{group}</small>
+              {items.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={active === item.id ? "active" : ""}
+                  aria-current={active === item.id ? "page" : undefined}
+                  onClick={() => go(item.id) && setMobileNav(false)}
+                >
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                  {item.badge ? <b className="count-badge">{item.badge} new</b> : null}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-foot">
@@ -391,4 +445,71 @@ function AppShell({
       </main>
     </div>
   );
+}
+
+const ORDER_SCREENS: Screen[] = ["orders", "stats", "payments", "settings"];
+const POLL_MS = 15_000;
+
+/** A short chime for a new order (no audio file needed). Browsers allow it once staff have clicked the page. */
+function chime() {
+  try {
+    const ctx = new AudioContext();
+    [880, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const start = ctx.currentTime + i * 0.18;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.2, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.5);
+    });
+  } catch {
+    // No sound available; the badge and the tab title still show the new order.
+  }
+}
+
+/** Polls the orders while the admin is open; chimes and updates the tab title when a new one arrives. */
+function useOrders(enabled: boolean) {
+  const [data, setData] = useState<OrdersOverview | null>(null);
+  const [error, setError] = useState("");
+  const lastId = useRef<number | null>(null);
+
+  const refresh = useCallback(
+    () =>
+      getOrders().then(
+        (next) => {
+          const newest = next.orders[0]?.id ?? 0;
+          if (lastId.current !== null && newest > lastId.current) chime();
+          lastId.current = newest;
+          setData(next);
+          setError("");
+        },
+        (e) => setError(errorText(e)),
+      ),
+    [],
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    refresh();
+    const id = setInterval(refresh, POLL_MS);
+    return () => clearInterval(id);
+  }, [enabled, refresh]);
+
+  // Re-applied after every poll, so nothing that resets the page title leaves it stale.
+  useEffect(() => {
+    const n = data?.newOrders ?? 0;
+    document.title = n ? `(${n}) New order${n === 1 ? "" : "s"} · Arabica admin` : "Arabica admin";
+  }, [data]);
+
+  const setStatus = useCallback(
+    async (id: number, status: OrderStatus) => {
+      await setOrderStatus(id, status);
+      await refresh();
+    },
+    [refresh],
+  );
+  return { data, error, setStatus };
 }

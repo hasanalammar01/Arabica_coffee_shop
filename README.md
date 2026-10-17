@@ -31,7 +31,7 @@ Open http://localhost:3000/admin. With no `ADMIN_PASSWORD` set, it opens without
 
 ### Go live (one-time setup)
 
-Staff sign in with **one shared password**; they don't need a GitHub account. When they publish, the website itself saves the change to this GitHub repository using a key that only the server knows. Every change is a commit, so nothing is ever lost and any change can be undone.
+Staff sign in with a username and password (username `admin` and `ADMIN_PASSWORD` until they're changed in **Settings**); they don't need a GitHub account. When they publish, the website itself saves the change to this GitHub repository using a key that only the server knows. Every change is a commit, so nothing is ever lost and any change can be undone.
 
 1. Deploy the repository on Vercel (Import → `hasanalammar01/Arabica_coffee_shop`).
 2. Create the website's GitHub key: GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
@@ -39,7 +39,7 @@ Staff sign in with **one shared password**; they don't need a GitHub account. Wh
    - Permissions: **Contents → Read and write** (nothing else).
    - Expiration: pick a date and set a reminder; when it expires, publishing stops with a clear message until you paste a new token.
 3. In Vercel → Project → **Settings → Environment Variables**, add (see `.env.example`):
-   - `ADMIN_PASSWORD`: the staff password. Use a long one (four or more random words). Changing it signs everyone out.
+   - `ADMIN_PASSWORD`: the first admin password (username `admin`). Use a long one (four or more random words). Once it's changed in the admin's Settings, the new one (stored hashed in the database) is used instead.
    - `GITHUB_TOKEN`: the key from step 2.
 4. Redeploy (Vercel → Deployments → ⋯ → Redeploy) so the new variables take effect.
 
@@ -67,6 +67,22 @@ The original PDF left these unclear. They are on the site as printed, so check a
 - **Khodra** (70,000) is listed as an add-on; is it a standalone saj?
 - **Dark Blue, BoomBoom, Pacha**: bottled brands? **Cocktail** saj, **Cake**, **Nuts**: need a description.
 - Hot Chocolate appeared twice in the PDF (same price) and is listed once.
+
+## Online orders
+
+Customers order from the menu (an **+** button on each item, a cart bar, and a checkout page at `/order`) when **Settings → Accept online orders** is on. Orders are only taken during the opening hours from Shop info, and the server always re-prices the cart from the menu. Payment isn't taken online: customers pick one of the methods set under **Payment methods** (cash on delivery, Whish, card on delivery…) and see its instructions.
+
+Staff see orders under **Orders** (a "new" badge, a sound and the count in the tab title; Accept → Mark as done, or Cancel), and totals for today, this week, this month and all time under **Statistics**.
+
+Orders and settings live in a Postgres database, never in this public repository (they hold customers' phones and addresses). One-time setup:
+
+1. Vercel → **Storage → Create → Neon**, connect it to the project (prefix `DATABASE`, so the variable is `DATABASE_URL`). The tables are created automatically.
+2. Locally, put the same connection string in `.env.local` as `DATABASE_URL=…` (never committed). Local and live share this database.
+3. Notifications, both optional, set in the admin under **Settings**:
+   - **WhatsApp** via [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/) (free, messages your own phone): activate it once from the phone that should get orders, then paste the number and key.
+   - **Email** via [Resend](https://resend.com) (free plan): add `RESEND_API_KEY` in Vercel and redeploy. Without a verified domain, Resend only delivers to the email you signed up with; verify a domain and set `EMAIL_FROM` to send elsewhere.
+
+A notification that fails never loses an order: it's already saved and shows in the admin.
 
 ## Shop details and opening hours
 
@@ -119,12 +135,15 @@ After the first deploy, set `url` in `data/site.json` to the live domain (used f
 ```
 app/(site)/     public pages: home, menu, about, contact (Visit), error, loading
 app/admin/      staff dashboard page and its styles (admin.css, scoped under .admin)
-app/api/admin/  session (password sign-in) and files (read/publish menu files)
+app/api/admin/  session (sign-in), files (read/publish menu files), orders and settings
+app/api/orders/ public: ordering on/off + payment methods (GET), place an order (POST)
 app/            root layout, 404, SEO files (sitemap, robots, share image, icon)
 components/     public site: MenuBrowser, DrinkCard, Price, Visit, OpenStatus, Header, Footer, Logo
-components/admin/  dashboard screens: AdminApp, MenuItems, ItemEditor, Sections, ShopInfo, ui
+components/admin/  dashboard screens: AdminApp, MenuItems, ItemEditor, Sections, ShopInfo, Orders, Settings, ui
+components/order/  online ordering: Add button + choice sheet, cart bar, checkout
 data/           menu.json + site.json (edited via /admin), menu.ts + site.ts (types)
-lib/            menu validation (menu-core.ts runs in the browser too), opening hours, formatting, tests
+lib/            menu validation (menu-core.ts runs in the browser too), orders-core.ts (pricing, validation,
+                statistics), db.ts (Postgres), notify.ts (WhatsApp/email), opening hours, formatting, tests
 lib/admin/      draft <-> JSON conversion, photo resizing (+ tests); auth.ts + store.ts run on the server
 public/         images, logo, PDF, service worker (offline menu), QR code
 assets/         original PDF and raw extracted images (not served)

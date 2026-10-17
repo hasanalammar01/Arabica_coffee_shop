@@ -13,7 +13,7 @@ const fail = (e: unknown) =>
 
 /** Read data/menu.json or data/site.json (latest version, not the deployed copy). */
 export async function GET(req: NextRequest) {
-  if (!isSignedIn(req)) return text("Your session ended. Sign in again.", 401);
+  if (!(await isSignedIn(req))) return text("Your session ended. Sign in again.", 401);
   if (!mode()) return text(NOT_SET_UP, 503);
   const path = req.nextUrl.searchParams.get("path") ?? "";
   if (!ALLOWED.test(path) || !path.endsWith(".json")) return text("That file can't be read here.", 400);
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 /** Publish: { message, files: [{ path, content (base64) }], base: { path: version } }. */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return text("Not allowed.", 403);
-  if (!isSignedIn(req)) return text("Your session ended. Sign in again, then publish.", 401);
+  if (!(await isSignedIn(req))) return text("Your session ended. Sign in again, then publish.", 401);
   if (!mode()) return text(NOT_SET_UP, 503);
 
   const body = (await req.json().catch(() => null)) as {

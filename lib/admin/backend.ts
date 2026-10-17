@@ -2,6 +2,7 @@
  * The admin's link to the server (/api/admin/*). The server holds the GitHub key and
  * decides where files go (lib/admin/store.ts); the browser only ever sees the menu files.
  */
+import type { DayTotal, Order, OrderStatus, ShopSettings, Totals } from "@/lib/orders-core";
 
 export type FileChange = { path: string; content: string | Blob };
 export type Mode = "github" | "local";
@@ -42,10 +43,33 @@ export const getSession = async () =>
   (await (await api("/api/admin/session")).json()) as {
     signedIn: boolean;
     mode: Mode | null;
+    /** The orders database is connected. */
+    orders: boolean;
   };
 
-export const signIn = (password: string) =>
-  api("/api/admin/session", { method: "POST", body: JSON.stringify({ password }) });
+export const signIn = (username: string, password: string) =>
+  api("/api/admin/session", { method: "POST", body: JSON.stringify({ username, password }) });
+
+/* Online orders and settings (stored in the database, not GitHub). */
+
+export type OrdersOverview = {
+  orders: Order[];
+  newOrders: number;
+  stats: { today: Totals; week: Totals; month: Totals; all: Totals; last30: DayTotal[] };
+};
+export type SettingsData = { shop: ShopSettings; username: string; passwordInDatabase: boolean; emailReady: boolean };
+
+export const getOrders = async () => (await (await api("/api/admin/orders")).json()) as OrdersOverview;
+export const setOrderStatus = (id: number, status: OrderStatus) =>
+  api("/api/admin/orders", { method: "PATCH", body: JSON.stringify({ id, status }) });
+export const getSettings = async () => (await (await api("/api/admin/settings")).json()) as SettingsData;
+export const saveShopSettings = async (shop: ShopSettings) =>
+  ((await (await api("/api/admin/settings", { method: "PUT", body: JSON.stringify(shop) })).json()) as { shop: ShopSettings })
+    .shop;
+export const saveAccount = (account: { currentPassword: string; username: string; newPassword: string }) =>
+  api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "account", ...account }) });
+export const testNotification = (channel: "whatsapp" | "email") =>
+  api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "test", channel }) });
 
 export const signOut = () => api("/api/admin/session", { method: "DELETE" });
 
