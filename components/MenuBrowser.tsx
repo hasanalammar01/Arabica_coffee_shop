@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MenuCategory, MenuItem, Tag } from "@/data/menu";
 import { pick, t, type Lang } from "@/lib/i18n";
 import { DrinkCard } from "./DrinkCard";
-import { InfoArrow, ItemInfo, itemDetails, SoldOut } from "./ItemInfo";
+import { InfoHint, ItemInfo, ItemInfoGroup, itemDetails, SoldOut } from "./ItemInfo";
 import { Price } from "./Price";
 
 const hasImage = (i: MenuItem): i is MenuItem & { image: string } => Boolean(i.image);
@@ -79,7 +79,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
   }, [active]);
 
   return (
-    <>
+    <ItemInfoGroup>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 print:hidden">
         <label htmlFor="menu-search" className="sr-only">
           {d.menu.search}
@@ -133,7 +133,9 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {visible.length === 0 && (
           <div className="py-20 text-center" role="status">
-            <p className="font-display text-2xl">{d.menu.nothing(query.trim() || (tag ? d.tags[tag] : ""))}</p>
+            <p className="font-display text-2xl">
+              {d.menu.nothing(query.trim() || (tag ? d.tags[tag] : ""))}
+            </p>
             <button
               type="button"
               onClick={() => (setQuery(""), setTag(null))}
@@ -164,7 +166,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               </div>
 
               {photos.length > 0 && (
-                <div className="mt-6 grid gap-4 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-5 print:grid-cols-4">
+                <div className="mt-6 grid items-start gap-4 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-5 print:grid-cols-4">
                   {photos.map((i, ii) => (
                     <DrinkCard key={i.id} item={i} lang={lang} priority={ci === 0 && ii < 2} />
                   ))}
@@ -190,7 +192,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
           );
         })}
       </div>
-    </>
+    </ItemInfoGroup>
   );
 }
 
@@ -198,13 +200,18 @@ function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; sm
   const d = t(lang);
   const details = itemDetails(item, lang);
   const soldOut = item.availability === "soldout";
+  const name = pick(lang, item.name, item.nameAr);
   return (
     <li className={`break-inside-avoid ${soldOut ? "opacity-60" : ""}`}>
-      <ItemInfo details={details} className={`-mx-2 px-2 ${small ? "py-2" : "py-3"}`}>
+      <ItemInfo
+        itemId={item.id}
+        label={`${name}: ${d.menu.details}`}
+        details={details}
+        className={`-mx-2 px-2 ${small ? "py-2" : "py-3"}`}
+      >
         <div className="flex items-baseline gap-3">
           <h3 className={`min-w-0 ${small ? "" : "text-[1.0625rem] font-medium"}`}>
-            {pick(lang, item.name, item.nameAr)}
-            {details && <InfoArrow />}
+            {name}
             {soldOut && <SoldOut lang={lang} />}
           </h3>
           <span className="leader" aria-hidden />
@@ -229,6 +236,7 @@ function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; sm
             ))}
           </ul>
         )}
+        {details && <InfoHint lang={lang} />}
       </ItemInfo>
     </li>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { DrinkCard } from "@/components/DrinkCard";
+import { ItemInfoGroup } from "@/components/ItemInfo";
 import { Logo } from "@/components/Logo";
 import { Price } from "@/components/Price";
 import { Gallery, storyParagraphs } from "@/components/Story";
@@ -32,7 +33,8 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const menu = publicMenu(getMenu());
   const signature = menu.flatMap((c) => c.items).filter((i) => i.signature);
   const story = storyParagraphs(lang);
-  const arrow = "transition-transform group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1";
+  const arrow =
+    "transition-transform group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1";
 
   return (
     <>
@@ -88,18 +90,23 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
           <h2 id="signature" className="font-display text-title">
             {d.home.signature}
           </h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4">
-            {signature.map((i) =>
-              i.image ? (
-                <DrinkCard key={i.id} item={{ ...i, image: i.image }} lang={lang} />
-              ) : (
-                <div key={i.id} className="flex flex-col justify-end rounded-card border border-line bg-surface p-5">
-                  <h3 className="text-[1.0625rem] font-medium">{pick(lang, i.name, i.nameAr)}</h3>
-                  <Price prices={i.prices} sizesAr={i.sizesAr} lang={lang} className="mt-1 text-muted" />
-                </div>
-              ),
-            )}
-          </div>
+          <ItemInfoGroup>
+            <div className="mt-8 grid items-start gap-4 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4">
+              {signature.map((i) =>
+                i.image ? (
+                  <DrinkCard key={i.id} item={{ ...i, image: i.image }} lang={lang} />
+                ) : (
+                  <div
+                    key={i.id}
+                    className="flex flex-col justify-end rounded-card border border-line bg-surface p-5"
+                  >
+                    <h3 className="text-[1.0625rem] font-medium">{pick(lang, i.name, i.nameAr)}</h3>
+                    <Price prices={i.prices} sizesAr={i.sizesAr} lang={lang} className="mt-1 text-muted" />
+                  </div>
+                ),
+              )}
+            </div>
+          </ItemInfoGroup>
         </section>
       )}
 

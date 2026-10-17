@@ -1,8 +1,8 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import type { MenuItem } from "@/data/menu";
-import { pick, type Lang } from "@/lib/i18n";
-import { InfoArrow, ItemInfo, itemDetails, SoldOut } from "./ItemInfo";
+import { pick, t, type Lang } from "@/lib/i18n";
+import { InfoHint, ItemInfo, itemDetails, SoldOut } from "./ItemInfo";
 import { Price } from "./Price";
 
 /**
@@ -26,7 +26,12 @@ export function DrinkCard({
   const name = pick(lang, item.name, item.nameAr);
   return (
     <article className={`group ${soldOut ? "opacity-60" : ""}`}>
-      <ItemInfo details={details} className="-m-1.5 p-1.5">
+      <ItemInfo
+        itemId={item.id}
+        label={`${name}: ${t(lang).menu.details}`}
+        details={details}
+        className="-m-1.5 p-1.5"
+      >
         <div className="flex items-center gap-4 sm:block">
           <div className="tile relative aspect-square w-22 shrink-0 overflow-hidden rounded-2xl shadow-lift sm:aspect-[4/5] sm:w-auto sm:rounded-card">
             <Image
@@ -35,14 +40,13 @@ export function DrinkCard({
               fill
               priority={priority}
               sizes="(min-width: 1024px) 220px, (min-width: 640px) 30vw, 88px"
-              className={`object-contain object-bottom px-[12%] pt-[12%] pb-[6%] drop-shadow-[0_10px_10px_rgb(0_0_0/0.35)] transition-transform duration-500 ease-out group-hover:-translate-y-1.5 sm:pb-[8%] ${soldOut ? "grayscale" : ""}`}
+              className={`drink-photo object-contain object-bottom px-[12%] pt-[12%] pb-[6%] drop-shadow-[0_10px_10px_rgb(0_0_0/0.35)] sm:pb-[8%] ${soldOut ? "grayscale" : ""}`}
             />
           </div>
           <div className="min-w-0 flex-1 sm:mt-3">
             <div className="flex items-baseline gap-3 sm:block">
               <h3 className="min-w-0 text-[1.0625rem] leading-snug font-medium">
                 {name}
-                {details && <InfoArrow />}
                 {soldOut && <SoldOut lang={lang} />}
               </h3>
               <span className="leader sm:hidden" aria-hidden />
@@ -53,6 +57,7 @@ export function DrinkCard({
                 {item.options.map((o, i) => pick(lang, o, item.optionsAr?.[i])).join(" · ")}
               </p>
             )}
+            {details && <InfoHint lang={lang} />}
           </div>
         </div>
       </ItemInfo>

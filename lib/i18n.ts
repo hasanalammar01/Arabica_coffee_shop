@@ -75,6 +75,7 @@ const en = {
     nothing: (q: string) => `Nothing matches “${q}”.`,
     showAll: "Show the full menu",
     soldOut: "Sold out",
+    details: "Details",
     ingredients: "Ingredients",
     allergens: "Contains",
     tags: "Tags",
@@ -113,7 +114,11 @@ const en = {
     toMenu: "Go to the menu",
     home: "Home",
   },
-  error: { title: "This page didn't load.", body: "Check your connection, then try again.", retry: "Try again" },
+  error: {
+    title: "This page didn't load.",
+    body: "Check your connection, then try again.",
+    retry: "Try again",
+  },
   loading: "Loading",
 };
 
@@ -123,7 +128,14 @@ const ar: Dict = {
   langName: "العربية",
   otherLang: "English",
   skip: "تخطَّ إلى المحتوى",
-  nav: { home: "الرئيسية", menu: "القائمة", about: "من نحن", visit: "زورونا", main: "الرئيسية", footer: "التذييل" },
+  nav: {
+    home: "الرئيسية",
+    menu: "القائمة",
+    about: "من نحن",
+    visit: "زورونا",
+    main: "الرئيسية",
+    footer: "التذييل",
+  },
   footer: { hoursLocation: "الدوام والموقع", instagram: "إنستغرام" },
   home: {
     headline: "قهوة على الكاونتر، وصاج طازج.",
@@ -171,6 +183,7 @@ const ar: Dict = {
     nothing: (q: string) => `لا نتائج لـ «${q}».`,
     showAll: "اعرض القائمة كاملة",
     soldOut: "نفد",
+    details: "التفاصيل",
     ingredients: "المكوّنات",
     allergens: "يحتوي على",
     tags: "تصنيفات",

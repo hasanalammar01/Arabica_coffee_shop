@@ -1,28 +1,44 @@
 import type { ReactNode } from "react";
 import type { MenuItem } from "@/data/menu";
 import { pick, t, type Lang } from "@/lib/i18n";
+import { ItemDisclosure } from "./ItemDisclosure";
 
-/** Description, ingredients and allergens for the tab; null when staff haven't added any. */
+export { ItemInfoGroup } from "./ItemDisclosure";
+
+/** Owner-supplied details only; null when staff haven't added any. */
 export function itemDetails(item: MenuItem, lang: Lang) {
   const d = t(lang);
-  const description = pick(lang, item.description ?? "", item.descriptionAr);
-  const ingredients = pick(lang, item.ingredients ?? "", item.ingredientsAr);
-  const allergens = item.allergens?.map((a) => d.allergens[a]).join(lang === "ar" ? "، " : ", ");
-  if (!description && !ingredients && !allergens) return null;
+  const description = pick(lang, item.description ?? "", item.descriptionAr).trim();
+  const ingredients = pick(lang, item.ingredients ?? "", item.ingredientsAr).trim();
+  const allergens = item.allergens ?? [];
+  if (!description && !ingredients && !allergens.length) return null;
   return (
     <>
-      {description && <span className="block">{description}</span>}
-      {ingredients && (
-        <span className="mt-1.5 block">
-          <span className="font-medium text-ink">{d.menu.ingredients}: </span>
-          {ingredients}
-        </span>
+      {description && (
+        <p dir="auto" className="[overflow-wrap:anywhere]">
+          {description}
+        </p>
       )}
-      {allergens && (
-        <span className="mt-1.5 block">
-          <span className="font-medium text-ink">{d.menu.allergens}: </span>
-          {allergens}
-        </span>
+      {ingredients && (
+        <p className="[overflow-wrap:anywhere]">
+          <span className="mb-1 block font-medium text-ink">{d.menu.ingredients}</span>
+          <span dir="auto">{ingredients}</span>
+        </p>
+      )}
+      {allergens.length > 0 && (
+        <div>
+          <p className="mb-1.5 font-medium text-ink">{d.menu.allergens}</p>
+          <ul className="flex flex-wrap gap-1.5" aria-label={d.menu.allergens}>
+            {allergens.map((allergen) => (
+              <li
+                key={allergen}
+                className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-xs font-medium text-ink"
+              >
+                {d.allergens[allergen]}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </>
   );
@@ -30,48 +46,61 @@ export function itemDetails(item: MenuItem, lang: Lang) {
 
 /**
  * Wraps a menu item. If it has details (what's in it, ingredients, allergens), tapping
- * the item opens a small tab underneath; tapping again closes it. Native <details>, so
- * it works with keyboard and screen readers and without JavaScript.
+ * the item opens a small panel underneath; tapping again closes it.
  */
 export function ItemInfo({
+  itemId,
+  label,
   details,
   className = "",
   children,
 }: {
+  itemId: string;
+  label: string;
   details: ReactNode | null;
   className?: string;
   children: ReactNode;
 }) {
   if (!details) return <div className={className}>{children}</div>;
   return (
-    <details className="group/info">
-      <summary
-        className={`block cursor-pointer list-none rounded-xl transition-colors hover:bg-surface/70 [&::-webkit-details-marker]:hidden ${className}`}
-      >
-        {children}
-      </summary>
-      <p className="relative mt-2.5 mb-2 animate-tab rounded-xl bg-surface px-4 py-3 text-sm leading-relaxed text-muted shadow-lift ring-1 ring-line before:absolute before:start-5 before:-top-[7px] before:size-3 before:rotate-45 before:border-t before:border-l before:border-line before:bg-surface">
-        {details}
-      </p>
-    </details>
+    <ItemDisclosure itemId={itemId} label={label} details={details} className={className}>
+      {children}
+    </ItemDisclosure>
   );
 }
 
-/** Small arrow after an item's name, showing it can be opened. Turns when open. */
-export function InfoArrow() {
+/** A quiet, localized tap hint; the information glyph pulses only on its first view. */
+export function InfoHint({ lang }: { lang: Lang }) {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="ms-1.5 inline-block size-4 align-[-3px] text-muted transition-transform duration-200 group-open/info:rotate-180 print:hidden"
+    <span
+      className="item-info-hint mt-2 flex items-center gap-1.5 text-xs font-medium text-caramel print:hidden"
+      aria-hidden="true"
     >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        className="item-info-icon size-3.5 shrink-0"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5m0-8h.01" />
+      </svg>
+      {t(lang).menu.details}
+      <svg
+        aria-hidden
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="item-info-chevron size-3.5 shrink-0"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </span>
   );
 }
 
