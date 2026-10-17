@@ -5,8 +5,9 @@ import { newKey, type DraftSection } from "@/lib/admin/draft";
 import type { Publish } from "./AdminApp";
 import { Button, ErrorBanner, Icon, PageHeader } from "./ui";
 
-type Row = { key: string; name: string; isNew?: boolean };
-const rowsOf = (sections: DraftSection[]): Row[] => sections.map((s) => ({ key: s.key, name: s.name }));
+type Row = { key: string; name: string; nameAr: string; arDraft: boolean; isNew?: boolean };
+const rowsOf = (sections: DraftSection[]): Row[] =>
+  sections.map(({ key, name, nameAr, arDraft }) => ({ key, name, nameAr, arDraft }));
 
 export function Sections({
   sections,
@@ -38,7 +39,8 @@ export function Sections({
     [next[index], next[index + offset]] = [next[index + offset], next[index]];
     change(next);
   };
-  const add = () => change([...rows, { key: newKey(), name: "", isNew: true }]);
+  const add = () => change([...rows, { key: newKey(), name: "", nameAr: "", arDraft: false, isNew: true }]);
+  const patch = (key: string, p: Partial<Row>) => change(rows.map((r) => (r.key === key ? { ...r, ...p } : r)));
   const remove = (row: Row) => {
     const n = count(row.key);
     if (n) setBlocked({ name: row.name, count: n });
@@ -58,11 +60,13 @@ export function Sections({
         rows.map((r) => ({
           key: r.key,
           name: r.name.trim(),
+          nameAr: r.nameAr.trim(),
+          arDraft: r.arDraft,
           items: sections.find((s) => s.key === r.key)?.items ?? [],
         })),
         "Menu: update sections",
       );
-      setRows((current) => current.map(({ key, name }) => ({ key, name: name.trim() })));
+      setRows((current) => current.map((r) => ({ ...r, isNew: false, name: r.name.trim(), nameAr: r.nameAr.trim() })));
       setLocalDirty(false);
       setAttempted(false);
     } catch (e) {
@@ -76,7 +80,7 @@ export function Sections({
     <div className="page narrow-page">
       <PageHeader
         title="Sections"
-        description="Order and rename the sections shown on the public menu."
+        description="Order and rename the sections shown on the public menu, in English and Arabic."
         actions={
           <Button icon="plus" onClick={add}>
             Add section
@@ -103,10 +107,24 @@ export function Sections({
                 value={row.name}
                 autoFocus={row.isNew && index === rows.length - 1}
                 placeholder="New section name"
-                onChange={(e) =>
-                  change(rows.map((r) => (r.key === row.key ? { ...r, name: e.target.value } : r)))
-                }
+                onChange={(e) => patch(row.key, { name: e.target.value })}
               />
+              <input
+                aria-label={`${row.name || "New section"} name in Arabic`}
+                dir="rtl"
+                lang="ar"
+                value={row.nameAr}
+                placeholder="الاسم بالعربية"
+                onChange={(e) => patch(row.key, { nameAr: e.target.value, arDraft: false })}
+              />
+              {row.arDraft && (
+                <small className="draft-note">
+                  Arabic is a suggested translation.{" "}
+                  <button type="button" className="inline-link" onClick={() => patch(row.key, { arDraft: false })}>
+                    Mark as checked
+                  </button>
+                </small>
+              )}
               <small>Renaming a section also changes its link on the website (e.g. /menu#hot-drinks).</small>
             </div>
             <span>{count(row.key)}</span>

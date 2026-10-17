@@ -82,14 +82,26 @@ html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
+/* Arabic: Young Serif has no Arabic letters, so headings use Reem Kufi (close to the logo). */
+html[lang="ar"] {
+  --font-display: var(--font-reem-kufi), var(--font-young-serif), serif;
+}
+html[lang="ar"] body {
+  line-height: 1.7;
+}
 body {
   background: var(--color-paper);
   color: var(--color-ink);
 }
 :focus-visible {
-  outline: 3px solid var(--color-crema);
+  outline: 3px solid var(--color-caramel);
   outline-offset: 2px;
   border-radius: 4px;
+}
+/* On the dark brown areas, the light beige ring is the visible one. */
+.tile :focus-visible,
+.bg-espresso :focus-visible {
+  outline-color: var(--color-crema);
 }
 .no-scrollbar {
   scrollbar-width: none;

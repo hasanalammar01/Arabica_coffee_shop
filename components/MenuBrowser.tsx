@@ -2,21 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MenuCategory, MenuItem, Tag } from "@/data/menu";
+import { pick, t, type Lang } from "@/lib/i18n";
 import { DrinkCard } from "./DrinkCard";
-import { InfoArrow, ItemInfo } from "./ItemInfo";
+import { InfoArrow, ItemInfo, itemDetails, SoldOut } from "./ItemInfo";
 import { Price } from "./Price";
-
-const TAG_LABELS: Record<Tag, string> = {
-  vegan: "Vegan",
-  "gluten-free": "Gluten-free",
-  spicy: "Spicy",
-  new: "New",
-  bestseller: "Bestseller",
-};
 
 const hasImage = (i: MenuItem): i is MenuItem & { image: string } => Boolean(i.image);
 
-export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
+export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }) {
+  const d = t(lang);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState<Tag | null>(null);
   const [active, setActive] = useState(menu[0]?.id);
@@ -35,9 +29,18 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
             (i) =>
               (!tag || i.tags?.includes(tag)) &&
               (!q ||
-                [c.name, i.name, i.description, ...(i.options ?? [])].some((s) =>
-                  s?.toLowerCase().includes(q),
-                )),
+                [
+                  c.name,
+                  c.nameAr,
+                  i.name,
+                  i.nameAr,
+                  i.description,
+                  i.descriptionAr,
+                  i.ingredients,
+                  i.ingredientsAr,
+                  ...(i.options ?? []),
+                  ...(i.optionsAr ?? []),
+                ].some((s) => s?.toLowerCase().includes(q))),
           ),
         }))
         .filter((c) => c.items.length),
@@ -65,42 +68,42 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
     };
   }, [visibleIds]);
 
-  // Keep the active chip in view inside the horizontal bar.
+  // Keep the active chip in view inside the horizontal bar (works left-to-right and right-to-left).
   useEffect(() => {
     const chip = bar.current?.querySelector<HTMLElement>(`[data-chip="${active}"]`);
-    if (chip && bar.current)
-      bar.current.scrollTo({
-        left: chip.offsetLeft - (bar.current.clientWidth - chip.offsetWidth) / 2,
-        behavior: "smooth",
-      });
+    const box = bar.current;
+    if (!chip || !box) return;
+    const c = chip.getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    box.scrollBy({ left: c.left + c.width / 2 - (b.left + b.width / 2), behavior: "smooth" });
   }, [active]);
 
   return (
     <>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 print:hidden">
         <label htmlFor="menu-search" className="sr-only">
-          Search the menu
+          {d.menu.search}
         </label>
         <input
           id="menu-search"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search: latte, mango, labneh…"
+          placeholder={d.menu.searchPlaceholder}
           autoComplete="off"
           className="h-12 w-full rounded-full border border-line bg-surface px-5 text-base placeholder:text-muted focus:border-ink sm:max-w-sm"
         />
         {tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by">
-            {tags.map((t) => (
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={d.menu.filterBy}>
+            {tags.map((tg) => (
               <button
-                key={t}
+                key={tg}
                 type="button"
-                aria-pressed={tag === t}
-                onClick={() => setTag(tag === t ? null : t)}
+                aria-pressed={tag === tg}
+                onClick={() => setTag(tag === tg ? null : tg)}
                 className="min-h-11 rounded-full border border-line px-4 text-sm aria-pressed:border-espresso aria-pressed:bg-espresso aria-pressed:text-on-espresso"
               >
-                {TAG_LABELS[t]}
+                {d.tags[tg]}
               </button>
             ))}
           </div>
@@ -108,7 +111,7 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
       </div>
 
       <nav
-        aria-label="Menu categories"
+        aria-label={d.menu.categories}
         className="sticky top-0 z-20 mt-6 border-b border-line bg-paper/90 backdrop-blur-md print:hidden"
       >
         <ul ref={bar} className="no-scrollbar mx-auto flex max-w-6xl gap-1 overflow-x-auto px-3 py-2 sm:px-5">
@@ -120,7 +123,7 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
                 aria-current={active === c.id ? "true" : undefined}
                 className="flex min-h-11 items-center rounded-full px-4 whitespace-nowrap text-muted transition-colors hover:text-ink aria-[current=true]:bg-espresso aria-[current=true]:text-on-espresso"
               >
-                {c.name}
+                {pick(lang, c.name, c.nameAr)}
               </a>
             </li>
           ))}
@@ -130,13 +133,13 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {visible.length === 0 && (
           <div className="py-20 text-center" role="status">
-            <p className="font-display text-2xl">Nothing matches “{query.trim() || TAG_LABELS[tag!]}”.</p>
+            <p className="font-display text-2xl">{d.menu.nothing(query.trim() || (tag ? d.tags[tag] : ""))}</p>
             <button
               type="button"
               onClick={() => (setQuery(""), setTag(null))}
               className="mt-6 min-h-11 rounded-full bg-espresso px-6 text-on-espresso"
             >
-              Show the full menu
+              {d.menu.showAll}
             </button>
           </div>
         )}
@@ -155,17 +158,15 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
             >
               <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
                 <h2 id={`${c.id}-title`} className="font-display text-title">
-                  {c.name}
+                  {pick(lang, c.name, c.nameAr)}
                 </h2>
-                <span className="text-sm text-muted">
-                  {c.items.length} {c.items.length === 1 ? "item" : "items"}
-                </span>
+                <span className="text-sm text-muted">{d.home.items(c.items.length)}</span>
               </div>
 
               {photos.length > 0 && (
                 <div className="mt-6 grid gap-4 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-5 print:grid-cols-4">
                   {photos.map((i, ii) => (
-                    <DrinkCard key={i.id} item={i} priority={ci === 0 && ii < 2} />
+                    <DrinkCard key={i.id} item={i} lang={lang} priority={ci === 0 && ii < 2} />
                   ))}
                 </div>
               )}
@@ -173,15 +174,15 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
               {rows.length > 0 && (
                 <ul className="mt-6 lg:columns-2 lg:gap-x-16">
                   {rows.map((i) => (
-                    <MenuRow key={i.id} item={i} />
+                    <MenuRow key={i.id} item={i} lang={lang} />
                   ))}
                 </ul>
               )}
 
               {addons.length > 0 && (
-                <ul className="mt-2 border-t border-dashed border-line pt-2 text-sm text-muted lg:w-1/2 lg:pr-8">
+                <ul className="mt-2 border-t border-dashed border-line pt-2 text-sm text-muted lg:w-1/2 lg:pe-8">
                   {addons.map((i) => (
-                    <MenuRow key={i.id} item={i} small />
+                    <MenuRow key={i.id} item={i} lang={lang} small />
                   ))}
                 </ul>
               )}
@@ -193,29 +194,37 @@ export function MenuBrowser({ menu }: { menu: MenuCategory[] }) {
   );
 }
 
-function MenuRow({ item, small = false }: { item: MenuItem; small?: boolean }) {
+function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; small?: boolean }) {
+  const d = t(lang);
+  const details = itemDetails(item, lang);
+  const soldOut = item.availability === "soldout";
   return (
-    <li className="break-inside-avoid">
-      <ItemInfo description={item.description} className={`-mx-2 px-2 ${small ? "py-2" : "py-3"}`}>
+    <li className={`break-inside-avoid ${soldOut ? "opacity-60" : ""}`}>
+      <ItemInfo details={details} className={`-mx-2 px-2 ${small ? "py-2" : "py-3"}`}>
         <div className="flex items-baseline gap-3">
           <h3 className={`min-w-0 ${small ? "" : "text-[1.0625rem] font-medium"}`}>
-            {item.name}
-            {item.description && <InfoArrow />}
+            {pick(lang, item.name, item.nameAr)}
+            {details && <InfoArrow />}
+            {soldOut && <SoldOut lang={lang} />}
           </h3>
           <span className="leader" aria-hidden />
-          <Price prices={item.prices} />
+          <Price prices={item.prices} sizesAr={item.sizesAr} lang={lang} />
         </div>
-        {item.options && <p className="mt-1 text-sm text-muted">{item.options.join(" · ")}</p>}
+        {item.options && (
+          <p className="mt-1 text-sm text-muted">
+            {item.options.map((o, i) => pick(lang, o, item.optionsAr?.[i])).join(" · ")}
+          </p>
+        )}
         {item.tags && item.tags.length > 0 && (
-          <ul className="mt-2 flex gap-1.5" aria-label="Tags">
-            {item.tags.map((t) => (
+          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={d.menu.tags}>
+            {item.tags.map((tg) => (
               <li
-                key={t}
+                key={tg}
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  t === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-caramel"
+                  tg === "new" ? "bg-pomegranate/12 text-pomegranate" : "bg-surface text-caramel"
                 }`}
               >
-                {TAG_LABELS[t]}
+                {d.tags[tg]}
               </li>
             ))}
           </ul>

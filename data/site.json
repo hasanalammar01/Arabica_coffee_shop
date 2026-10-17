@@ -1,9 +1,12 @@
 {
   "name": "Arabica deli-café",
+  "nameAr": "أرابيكا",
   "url": "https://arabica-deli-cafe.vercel.app",
   "timeZone": "Asia/Beirut",
   "description": "Arabica deli-café: espresso and iced coffee, shakes and smoothies, saj from the griddle, desserts and shisha.",
+  "descriptionAr": "أرابيكا ديلي كافيه: إسبريسو وقهوة باردة، ميلك شيك وسموذي، صاج، حلويات وأراكيل.",
   "address": "",
+  "addressAr": "",
   "mapsQuery": "",
   "phone": "",
   "whatsapp": "",
@@ -22,5 +25,13 @@
       "open": "08:00",
       "close": "00:00"
     }
-  ]
+  ],
+  "specialHours": [],
+  "story": {
+    "title": "A deli-café, all day long",
+    "titleAr": "ديلي كافيه طوال اليوم",
+    "body": "Arabica pours espresso, cappuccino and caramel macchiato, and on warm days iced lattes, frappés and homemade iced tea.\n\nFrom the saj come zaatar, labneh and makdous, turkey and cheese, or Nutella and banana. Stay for a brownie, a cheesecake, or a shisha.",
+    "bodyAr": "في أرابيكا نحضّر الإسبريسو والكابتشينو والكراميل ماكياتو، وفي الأيام الحارّة الآيس لاتيه والفرابيه والآيس تي المنزلي.\n\nومن الصاج: زعتر، لبنة ومكدوس، حبش وجبنة، أو نوتيلا وموز. وابقَ لقطعة براونيز أو تشيز كيك، أو لأركيلة."
+  },
+  "gallery": []
 }

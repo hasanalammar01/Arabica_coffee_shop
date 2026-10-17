@@ -4,27 +4,42 @@
       "name": "Hot Drinks",
       "items": [
         {
+          "id": "hot-drinks-espresso",
           "name": "Espresso",
+          "nameAr": "إسبريسو",
+          "arDraft": true,
           "price": 90000,
           "image": "/menu/espresso.webp"
         },
         {
+          "id": "hot-drinks-cappuccino",
           "name": "Cappuccino",
+          "nameAr": "كابتشينو",
+          "arDraft": true,
           "price": 315000,
           "image": "/menu/cappuccino.webp"
         },
         {
+          "id": "hot-drinks-caffe-latte",
           "name": "Caffè Latte",
+          "nameAr": "كافيه لاتيه",
+          "arDraft": true,
           "price": 360000,
           "image": "/menu/caffe-latte.webp"
         },
         {
+          "id": "hot-drinks-hot-chocolate",
           "name": "Hot Chocolate",
+          "nameAr": "شوكولا ساخنة",
+          "arDraft": true,
           "price": 390000,
           "image": "/menu/hot-chocolate.webp"
         },
         {
+          "id": "hot-drinks-special-tea",
           "name": "Special Tea",
+          "nameAr": "شاي مميّز",
+          "arDraft": true,
           "price": 200000,
           "options": [
             "Spanish White Peach & Ginger",
@@ -33,269 +48,454 @@
             "German Chamomile & Lemon Balm",
             "Oregon Spearmint & Peppermint"
           ],
-          "image": "/menu/special-tea.webp"
+          "image": "/menu/special-tea.webp",
+          "optionsAr": [
+            "خوخ أبيض إسباني وزنجبيل",
+            "رمان مغربي وعُصفُر",
+            "تفاح نمساوي وقرفة وفانيلا",
+            "بابونج ألماني وترنجان",
+            "نعناع أخضر ونعناع فلفلي"
+          ]
         },
         {
+          "id": "hot-drinks-double-espresso",
           "name": "Double Espresso",
+          "nameAr": "إسبريسو دبل",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "hot-drinks-americano",
           "name": "Americano",
+          "nameAr": "أمريكانو",
+          "arDraft": true,
           "price": 100000
         },
         {
+          "id": "hot-drinks-tea-box",
           "name": "Tea Box",
+          "nameAr": "تي بوكس",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "hot-drinks-nescafe",
           "name": "Nescafé",
+          "nameAr": "نسكافيه",
+          "arDraft": true,
           "price": 270000
         },
         {
+          "id": "hot-drinks-caramel-macchiato",
           "name": "Caramel Macchiato",
+          "nameAr": "كراميل ماكياتو",
+          "arDraft": true,
           "price": 400000
         }
-      ]
+      ],
+      "nameAr": "مشروبات ساخنة",
+      "arDraft": true
     },
     {
       "name": "Shakes",
       "items": [
         {
+          "id": "shakes-chocolate",
           "name": "Chocolate",
+          "nameAr": "شوكولا",
+          "arDraft": true,
           "price": 450000,
           "image": "/menu/shake-chocolate.webp"
         },
         {
+          "id": "shakes-strawberry",
           "name": "Strawberry",
+          "nameAr": "فريز",
+          "arDraft": true,
           "price": 450000,
           "image": "/menu/shake-strawberry.webp"
         },
         {
+          "id": "shakes-caramel",
           "name": "Caramel",
+          "nameAr": "كراميل",
+          "arDraft": true,
           "price": 450000,
           "image": "/menu/shake-caramel.webp"
         },
         {
+          "id": "shakes-mango",
           "name": "Mango",
+          "nameAr": "مانغو",
+          "arDraft": true,
           "price": 450000,
           "image": "/menu/shake-mango.webp"
         }
-      ]
+      ],
+      "nameAr": "ميلك شيك",
+      "arDraft": true
     },
     {
       "name": "Smoothies",
       "items": [
         {
+          "id": "smoothies-mango-passion",
           "name": "Mango Passion",
+          "nameAr": "مانغو باشن",
+          "arDraft": true,
           "price": 400000,
           "image": "/menu/smoothie-mango-passion.webp"
         },
         {
+          "id": "smoothies-kiwi-apple",
           "name": "Kiwi Apple",
+          "nameAr": "كيوي وتفاح",
+          "arDraft": true,
           "price": 400000,
           "image": "/menu/smoothie-kiwi-apple.webp"
         },
         {
+          "id": "smoothies-mix-berries",
           "name": "Mix Berries",
+          "nameAr": "توت مشكّل",
+          "arDraft": true,
           "price": 450000,
           "image": "/menu/smoothie-mix-berries.webp"
         },
         {
+          "id": "smoothies-mint-lemonade",
           "name": "Mint Lemonade",
+          "nameAr": "ليموناضة بالنعناع",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "smoothies-strawberry-lychee",
           "name": "Strawberry Lychee",
+          "nameAr": "فريز وليتشي",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "smoothies-pina-colada",
           "name": "Piña Colada",
+          "nameAr": "بينا كولادا",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "smoothies-blueberry-mango",
           "name": "Blueberry Mango",
+          "nameAr": "توت أزرق ومانغو",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "smoothies-mango-strawberry",
           "name": "Mango Strawberry",
+          "nameAr": "مانغو وفريز",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "smoothies-cotton-candy",
           "name": "Cotton Candy",
+          "nameAr": "غزل البنات",
+          "arDraft": true,
           "price": 400000
         }
-      ]
+      ],
+      "nameAr": "سموذي",
+      "arDraft": true
     },
     {
       "name": "Cold Drinks",
       "items": [
         {
+          "id": "cold-drinks-iced-latte",
           "name": "Iced Latte",
+          "nameAr": "آيس لاتيه",
+          "arDraft": true,
           "price": 400000,
           "image": "/menu/iced-latte.webp"
         },
         {
+          "id": "cold-drinks-caramel-frappe",
           "name": "Caramel Frappé",
+          "nameAr": "كراميل فرابيه",
+          "arDraft": true,
           "price": 400000,
           "image": "/menu/caramel-frappe.webp"
         },
         {
+          "id": "cold-drinks-cappuccino-freddo",
           "name": "Cappuccino Freddo",
+          "nameAr": "كابتشينو فريدو",
+          "arDraft": true,
           "price": 315000,
           "image": "/menu/cappuccino-freddo.webp"
         },
         {
+          "id": "cold-drinks-iced-americano",
           "name": "Iced Americano",
+          "nameAr": "آيس أمريكانو",
+          "arDraft": true,
           "price": 120000,
           "image": "/menu/iced-americano.webp"
         },
         {
+          "id": "cold-drinks-espresso-freddo",
           "name": "Espresso Freddo",
+          "nameAr": "إسبريسو فريدو",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "cold-drinks-frappe-coffee",
           "name": "Frappé Coffee",
+          "nameAr": "قهوة فرابيه",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "cold-drinks-chocolate-frappe",
           "name": "Chocolate Frappé",
+          "nameAr": "شوكولا فرابيه",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "cold-drinks-homemade-iced-tea",
           "name": "Homemade Iced Tea",
+          "nameAr": "آيس تي منزلي",
+          "arDraft": true,
           "price": 270000,
           "options": [
             "Peach",
             "Lemon",
             "Raspberry"
+          ],
+          "optionsAr": [
+            "درّاق",
+            "ليمون",
+            "توت العليق"
           ]
         },
         {
+          "id": "cold-drinks-dark-blue",
           "name": "Dark Blue",
+          "nameAr": "دارك بلو",
+          "arDraft": true,
           "price": 180000
         },
         {
+          "id": "cold-drinks-boomboom",
           "name": "BoomBoom",
+          "nameAr": "بوم بوم",
+          "arDraft": true,
           "price": 205000
         },
         {
+          "id": "cold-drinks-pacha",
           "name": "Pacha",
+          "nameAr": "باتشا",
+          "arDraft": true,
           "price": 250000
         },
         {
+          "id": "cold-drinks-rim-sparkling",
           "name": "Rim Sparkling",
+          "nameAr": "ريم فوّار",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "cold-drinks-soft-drinks",
           "name": "Soft Drinks",
+          "nameAr": "مشروبات غازية",
+          "arDraft": true,
           "price": 150000,
           "options": [
             "Pepsi",
             "Pepsi Diet",
             "7UP",
             "Mirinda"
+          ],
+          "optionsAr": [
+            "بيبسي",
+            "بيبسي دايت",
+            "سفن أب",
+            "ميرندا"
           ]
         }
-      ]
+      ],
+      "nameAr": "مشروبات باردة",
+      "arDraft": true
     },
     {
       "name": "Dessert",
       "items": [
         {
+          "id": "dessert-brownies",
           "name": "Brownies",
+          "nameAr": "براونيز",
+          "arDraft": true,
           "price": 400000,
           "image": "/menu/brownies.webp"
         },
         {
+          "id": "dessert-cheesecake",
           "name": "Cheesecake",
+          "nameAr": "تشيز كيك",
+          "arDraft": true,
           "price": 270000
         },
         {
+          "id": "dessert-cake",
           "name": "Cake",
+          "nameAr": "كيك",
+          "arDraft": true,
           "price": 270000
         },
         {
+          "id": "dessert-custard",
           "name": "Custard",
+          "nameAr": "كاسترد",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "dessert-nuts",
           "name": "Nuts",
+          "nameAr": "مكسّرات",
+          "arDraft": true,
           "price": 250000
         }
-      ]
+      ],
+      "nameAr": "حلويات",
+      "arDraft": true
     },
     {
       "name": "Saj",
       "items": [
         {
+          "id": "saj-zaatar",
           "name": "Zaatar",
+          "nameAr": "زعتر",
+          "arDraft": true,
           "price": 120000
         },
         {
+          "id": "saj-cheese",
           "name": "Cheese",
+          "nameAr": "جبنة",
+          "arDraft": true,
           "price": 230000
         },
         {
+          "id": "saj-cocktail",
           "name": "Cocktail",
+          "nameAr": "كوكتيل",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "saj-turkey-cheese",
           "name": "Turkey & Cheese",
+          "nameAr": "حبش وجبنة",
+          "arDraft": true,
           "price": 375000
         },
         {
+          "id": "saj-labneh",
           "name": "Labneh",
+          "nameAr": "لبنة",
+          "arDraft": true,
           "price": 180000
         },
         {
+          "id": "saj-labneh-makdous",
           "name": "Labneh & Makdous",
+          "nameAr": "لبنة ومكدوس",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "saj-bandoura-basal",
           "name": "Bandoura & Basal",
+          "nameAr": "بندورة وبصل",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "saj-nutella",
           "name": "Nutella",
+          "nameAr": "نوتيلا",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "saj-nutella-banana",
           "name": "Nutella & Banana",
+          "nameAr": "نوتيلا وموز",
+          "arDraft": true,
           "price": 200000
         },
         {
+          "id": "saj-add-cheese",
           "name": "Add Cheese",
+          "nameAr": "إضافة جبنة",
+          "arDraft": true,
           "price": 100000,
           "addon": true
         },
         {
+          "id": "saj-khodra-vegetables",
           "name": "Khodra (vegetables)",
+          "nameAr": "خضرة",
+          "arDraft": true,
           "price": 70000,
           "addon": true
         }
-      ]
+      ],
+      "nameAr": "صاج",
+      "arDraft": true
     },
     {
       "name": "Shisha",
       "items": [
         {
+          "id": "shisha-mouassal",
           "name": "Mouassal",
+          "nameAr": "معسّل",
+          "arDraft": true,
           "price": 400000
         },
         {
+          "id": "shisha-gold",
           "name": "Gold",
+          "nameAr": "غولد",
+          "arDraft": true,
           "price": 360000
         },
         {
+          "id": "shisha-ajami",
           "name": "Ajami",
+          "nameAr": "عجمي",
+          "arDraft": true,
           "price": 500000
         },
         {
+          "id": "shisha-add-ras-extra-head",
           "name": "Add Ras (extra head)",
+          "nameAr": "راس إضافي",
+          "arDraft": true,
           "price": 200000,
           "addon": true
         }
-      ]
+      ],
+      "nameAr": "أراكيل",
+      "arDraft": true
     }
   ]
 }

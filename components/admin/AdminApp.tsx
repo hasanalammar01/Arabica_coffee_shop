@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin/backend";
 import {
   newKey,
+  newItemId,
   toDraft,
   toJsonFile,
   toMenuJson,
@@ -110,8 +111,12 @@ export function AdminApp() {
   /** Validates, uploads new photos and publishes menu.json, all in one commit. */
   const publish: Publish = useCallback(
     async (next, message) => {
+      const withIds = next.map((s) => ({
+        ...s,
+        items: s.items.map((i) => (i.id ? i : { ...i, id: newItemId(i.name) })),
+      }));
       try {
-        buildMenu(toMenuJson(next).categories);
+        buildMenu(toMenuJson(withIds).categories);
       } catch (e) {
         const problems = errorText(e)
           .split("\n")
@@ -122,7 +127,7 @@ export function AdminApp() {
         );
       }
       const files: FileChange[] = [];
-      const withPhotos = next.map((s) => ({
+      const withPhotos = withIds.map((s) => ({
         ...s,
         items: s.items.map((i) => {
           if (!i.upload) return i;
@@ -144,7 +149,8 @@ export function AdminApp() {
     const from = sections.find((s) => s.items.some((i) => i.key === item.key));
     const oldIndex = from?.items.findIndex((i) => i.key === item.key) ?? -1;
     let next = sections.map((s) => ({ ...s, items: s.items.filter((i) => i.key !== item.key) }));
-    if ("newSection" in to) next = [...next, { key: newKey(), name: to.newSection, items: [item] }];
+    if ("newSection" in to)
+      next = [...next, { key: newKey(), name: to.newSection, nameAr: "", arDraft: false, items: [item] }];
     else
       next = next.map((s) =>
         s.key === to.sectionKey ? insertAt(s, item, from?.key === s.key ? oldIndex : afterKey) : s,

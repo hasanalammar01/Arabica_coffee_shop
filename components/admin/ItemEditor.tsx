@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TAGS, type Tag } from "@/data/menu";
-import { preparePhoto, type DraftItem, type DraftSection } from "@/lib/admin/draft";
+import { ALLERGENS, AVAILABILITY, TAGS, type Allergen, type Availability, type Tag } from "@/data/menu";
+import { preparePhoto, type DraftItem, type DraftModifier, type DraftSection } from "@/lib/admin/draft";
+import { t } from "@/lib/i18n";
 import type { Editing } from "./AdminApp";
 import {
   Button,
@@ -12,11 +13,16 @@ import {
   Icon,
   Modal,
   PageHeader,
-  TAG_LABELS,
   Tags,
   Thumbnail,
   Toggle,
 } from "./ui";
+
+const AVAILABILITY_LABELS: Record<Availability, string> = {
+  available: "Available",
+  soldout: "Sold out",
+  hidden: "Hidden from website",
+};
 
 export type Destination = { sectionKey: string } | { newSection: string };
 
@@ -60,6 +66,13 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
   const sizeInvalid =
     pricing === "size" && (!sizes.length || sizes.some((s) => !s.size.trim() || !Number(s.price)));
   const priceMissing = pricing === "single" && !Number(item.price);
+  const modifierInvalid = item.modifiers.some(
+    (m) =>
+      !m.name.trim() ||
+      !m.choices.length ||
+      m.choices.some((c) => !c.name.trim()) ||
+      (m.max !== "" && Number(m.min || 0) > Number(m.max)),
+  );
 
   const problem = !item.name.trim()
     ? "needs a name"
@@ -69,7 +82,9 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
         ? "needs a price"
         : sizeInvalid
           ? "needs a name and price for every size"
-          : "";
+          : modifierInvalid
+            ? "has an order option without a name or choices"
+            : "";
 
   const sectionName =
     newSection !== null
@@ -102,8 +117,8 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
 
   const fix = () => {
     if (!item.name.trim()) nameRef.current?.focus();
-    else if (pricing === "single") priceRef.current?.focus();
-    else document.querySelector<HTMLInputElement>(".size-row.invalid input")?.focus();
+    else if (priceMissing) priceRef.current?.focus();
+    else document.querySelector<HTMLInputElement>(".size-row.invalid input, .modifier-group input.error")?.focus();
   };
 
   const pickPhoto = async (file: File | undefined) => {
@@ -124,10 +139,14 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
 
   const toggleTag = (tag: Tag) =>
     update({ tags: item.tags.includes(tag) ? item.tags.filter((t) => t !== tag) : [...item.tags, tag] });
+  const toggleAllergen = (a: Allergen) =>
+    update({ allergens: item.allergens.includes(a) ? item.allergens.filter((x) => x !== a) : [...item.allergens, a] });
+  const setModifier = (index: number, patch: Partial<DraftModifier>) =>
+    update({ modifiers: item.modifiers.map((m, i) => (i === index ? { ...m, ...patch } : m)) });
 
   const setPricingMode = (mode: "single" | "size") => {
     setPricing(mode);
-    if (mode === "size" && !item.sizes.length) update({ sizes: [{ size: "", price: "" }] });
+    if (mode === "size" && !item.sizes.length) update({ sizes: [{ size: "", sizeAr: "", price: "" }] });
     else setLocalDirty(true);
   };
 
@@ -161,6 +180,40 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
 
       <div className="editor-layout">
         <div className="form-column">
+          <section className="form-section">
+            <div className="section-title">
+              <h2>Availability</h2>
+              <p>
+                Sold out keeps the item on the menu, greyed out. Hidden takes it off the website without deleting
+                it.
+              </p>
+            </div>
+            <div className="segmented" role="group" aria-label="Availability">
+              {AVAILABILITY.map((a) => (
+                <button
+                  type="button"
+                  key={a}
+                  aria-pressed={item.availability === a}
+                  className={item.availability === a ? "selected" : ""}
+                  onClick={() => update({ availability: a })}
+                >
+                  {AVAILABILITY_LABELS[a]}
+                </button>
+              ))}
+            </div>
+            <div className="addon-setting">
+              <div>
+                <b>Feature on the home page</b>
+                <p>Shown under “Signature picks”. Choose a few of the café&apos;s best items.</p>
+              </div>
+              <Toggle
+                checked={item.signature}
+                onChange={(signature) => update({ signature })}
+                label="Feature this item on the home page"
+              />
+            </div>
+          </section>
+
           <section className="form-section">
             <div className="section-title">
               <h2>Details</h2>
@@ -221,6 +274,27 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
               )}
             </div>
             <Field
+              label="Name in Arabic"
+              hint={
+                item.arDraft
+                  ? "Suggested translation. Check it before relying on it."
+                  : "Shown on the Arabic menu. Empty shows the English name."
+              }
+            >
+              <input
+                dir="rtl"
+                lang="ar"
+                value={item.nameAr}
+                onChange={(e) => update({ nameAr: e.target.value, arDraft: false })}
+                placeholder="الاسم بالعربية"
+              />
+              {item.arDraft && (
+                <button type="button" className="inline-link" onClick={() => update({ arDraft: false })}>
+                  <Icon name="check" size={17} /> The Arabic name is correct
+                </button>
+              )}
+            </Field>
+            <Field
               label="What's in it"
               hint={`Optional · guests see it when they tap the item · ${item.description.length}/140`}
             >
@@ -229,6 +303,15 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 onChange={(e) => update({ description: e.target.value })}
                 maxLength={140}
                 placeholder="e.g. Double espresso, steamed milk and caramel sauce"
+              />
+            </Field>
+            <Field label="What's in it, in Arabic" hint={`Optional · ${item.descriptionAr.length}/140`}>
+              <textarea
+                dir="rtl"
+                lang="ar"
+                value={item.descriptionAr}
+                onChange={(e) => update({ descriptionAr: e.target.value })}
+                maxLength={140}
               />
             </Field>
             <div className="upload-row">
@@ -303,6 +386,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
               <div className="size-prices">
                 <div className="size-head">
                   <span>Size name</span>
+                  <span>In Arabic</span>
                   <span>Price</span>
                   <span />
                 </div>
@@ -318,6 +402,18 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                       onChange={(e) =>
                         update({
                           sizes: item.sizes.map((s, i) => (i === index ? { ...s, size: e.target.value } : s)),
+                        })
+                      }
+                    />
+                    <input
+                      aria-label={`${size.size || "Size"} name in Arabic`}
+                      dir="rtl"
+                      lang="ar"
+                      value={size.sizeAr}
+                      placeholder="صغير"
+                      onChange={(e) =>
+                        update({
+                          sizes: item.sizes.map((s, i) => (i === index ? { ...s, sizeAr: e.target.value } : s)),
                         })
                       }
                     />
@@ -349,7 +445,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 <button
                   type="button"
                   className="add-row"
-                  onClick={() => update({ sizes: [...item.sizes, { size: "", price: "" }] })}
+                  onClick={() => update({ sizes: [...item.sizes, { size: "", sizeAr: "", price: "" }] })}
                 >
                   <Icon name="plus" /> Add size
                 </button>
@@ -375,7 +471,13 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                     {choice}
                     <button
                       type="button"
-                      onClick={() => update({ options: item.options.filter((o) => o !== choice) })}
+                      onClick={() => {
+                        const n = item.options.indexOf(choice);
+                        update({
+                          options: item.options.filter((_, i) => i !== n),
+                          optionsAr: item.optionsAr.filter((_, i) => i !== n),
+                        });
+                      }}
                       aria-label={`Remove ${choice}`}
                     >
                       <Icon name="close" size={14} />
@@ -396,7 +498,28 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 />
               </div>
             </Field>
-            <Field label="Tags">
+            {item.options.length > 0 && (
+              <Field label="Choices in Arabic" hint="Optional. Empty ones show in English on the Arabic menu.">
+                <div className="choice-ar-list">
+                  {item.options.map((choice, n) => (
+                    <label key={choice}>
+                      <span>{choice}</span>
+                      <input
+                        dir="rtl"
+                        lang="ar"
+                        value={item.optionsAr[n] ?? ""}
+                        onChange={(e) => {
+                          const optionsAr = item.options.map((_, i) => item.optionsAr[i] ?? "");
+                          optionsAr[n] = e.target.value;
+                          update({ optionsAr });
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </Field>
+            )}
+            <Field label="Tags" hint="Only tick dietary tags the café has confirmed.">
               <div className="tag-toggles">
                 {TAGS.map((tag) => (
                   <button
@@ -407,7 +530,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                     onClick={() => toggleTag(tag)}
                   >
                     {item.tags.includes(tag) && <Icon name="check" size={15} />}
-                    {TAG_LABELS[tag]}
+                    {t("en").tags[tag]}
                   </button>
                 ))}
               </div>
@@ -423,6 +546,173 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 label="This item is an add-on"
               />
             </div>
+          </section>
+
+          <section className="form-section">
+            <div className="section-title">
+              <h2>Ingredients and allergens</h2>
+              <p>Guests see these when they tap the item. Leave them empty until the café confirms them.</p>
+            </div>
+            <Field label="Ingredients" hint="Optional">
+              <textarea
+                value={item.ingredients}
+                onChange={(e) => update({ ingredients: e.target.value })}
+                maxLength={300}
+                placeholder="e.g. Espresso, milk, caramel syrup"
+              />
+            </Field>
+            <Field label="Ingredients in Arabic" hint="Optional">
+              <textarea
+                dir="rtl"
+                lang="ar"
+                value={item.ingredientsAr}
+                onChange={(e) => update({ ingredientsAr: e.target.value })}
+                maxLength={300}
+              />
+            </Field>
+            <Field label="Contains (allergens)">
+              <div className="tag-toggles">
+                {ALLERGENS.map((a) => (
+                  <button
+                    type="button"
+                    key={a}
+                    aria-pressed={item.allergens.includes(a)}
+                    className={item.allergens.includes(a) ? "selected" : ""}
+                    onClick={() => toggleAllergen(a)}
+                  >
+                    {item.allergens.includes(a) && <Icon name="check" size={15} />}
+                    {t("en").allergens[a]}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </section>
+
+          <section className="form-section">
+            <div className="section-title">
+              <h2>Order options</h2>
+              <p>
+                Choices guests make when ordering online, such as milk or an extra shot. Used only when online
+                ordering is on. A price is added to the item price.
+              </p>
+            </div>
+            {item.modifiers.map((m, mi) => (
+              <fieldset className="modifier-group" key={mi}>
+                <legend className="sr-only">Option group {mi + 1}</legend>
+                <div className="size-row">
+                  <input
+                    aria-label="Option group name"
+                    className={attempted && !m.name.trim() ? "error" : ""}
+                    value={m.name}
+                    placeholder="e.g. Milk"
+                    onChange={(e) => setModifier(mi, { name: e.target.value })}
+                  />
+                  <input
+                    aria-label="Option group name in Arabic"
+                    dir="rtl"
+                    lang="ar"
+                    value={m.nameAr}
+                    placeholder="الحليب"
+                    onChange={(e) => setModifier(mi, { nameAr: e.target.value })}
+                  />
+                  <span />
+                  <button
+                    type="button"
+                    aria-label={`Delete ${m.name || "option group"}`}
+                    onClick={() => update({ modifiers: item.modifiers.filter((_, i) => i !== mi) })}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </div>
+                <div className="modifier-rules">
+                  <label>
+                    Guests pick at least
+                    <input
+                      inputMode="numeric"
+                      value={m.min}
+                      placeholder="0"
+                      onChange={(e) => setModifier(mi, { min: e.target.value.replace(/\D/g, "") })}
+                    />
+                  </label>
+                  <label>
+                    and at most
+                    <input
+                      inputMode="numeric"
+                      value={m.max}
+                      placeholder="1"
+                      onChange={(e) => setModifier(mi, { max: e.target.value.replace(/\D/g, "") })}
+                    />
+                  </label>
+                </div>
+                {m.choices.map((c, ci) => {
+                  const setChoice = (patch: Partial<DraftModifier["choices"][number]>) =>
+                    setModifier(mi, { choices: m.choices.map((x, i) => (i === ci ? { ...x, ...patch } : x)) });
+                  return (
+                    <div className={`size-row ${attempted && !c.name.trim() ? "invalid" : ""}`} key={ci}>
+                      <input
+                        aria-label="Choice"
+                        value={c.name}
+                        placeholder="e.g. Oat milk"
+                        onChange={(e) => setChoice({ name: e.target.value })}
+                      />
+                      <input
+                        aria-label="Choice in Arabic"
+                        dir="rtl"
+                        lang="ar"
+                        value={c.nameAr}
+                        placeholder="حليب الشوفان"
+                        onChange={(e) => setChoice({ nameAr: e.target.value })}
+                      />
+                      <div className="currency-input">
+                        <input
+                          aria-label={`${c.name || "Choice"} extra price`}
+                          inputMode="numeric"
+                          value={c.price}
+                          placeholder="0"
+                          onChange={(e) => setChoice({ price: e.target.value.replace(/\D/g, "") })}
+                        />
+                        <span>L.L</span>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${c.name || "choice"}`}
+                        onClick={() => setModifier(mi, { choices: m.choices.filter((_, i) => i !== ci) })}
+                      >
+                        <Icon name="trash" />
+                      </button>
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="add-row"
+                  onClick={() => setModifier(mi, { choices: [...m.choices, { name: "", nameAr: "", price: "" }] })}
+                >
+                  <Icon name="plus" /> Add choice
+                </button>
+              </fieldset>
+            ))}
+            <button
+              type="button"
+              className="add-row"
+              onClick={() =>
+                update({
+                  modifiers: [
+                    ...item.modifiers,
+                    { name: "", nameAr: "", min: "0", max: "1", choices: [{ name: "", nameAr: "", price: "" }] },
+                  ],
+                })
+              }
+            >
+              <Icon name="plus" /> Add option group
+            </button>
+            {attempted && modifierInvalid && (
+              <div className="price-error">
+                <Icon name="warning" />
+                Every option group needs a name and at least one named choice. “At least” can&apos;t be more than
+                “at most”.
+              </div>
+            )}
           </section>
 
           {!editing.isNew && (
@@ -473,6 +763,9 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
               )}
               {item.options.length > 0 && <p>{item.options.join(" · ")}</p>}
               <Tags values={item.tags} addon={item.addon} />
+              {item.availability !== "available" && (
+                <p className={`preview-status ${item.availability}`}>{AVAILABILITY_LABELS[item.availability]}</p>
+              )}
               {/* Shown open here; on the menu it opens when guests tap the item. */}
               {item.description && <p className="preview-tab">{item.description}</p>}
             </div>

@@ -5,8 +5,10 @@ import type { Tag } from "@/data/menu";
 import type { DraftItem } from "@/lib/admin/draft";
 
 export const TAG_LABELS: Record<Tag, string> = {
+  vegetarian: "Vegetarian",
   vegan: "Vegan",
   "gluten-free": "Gluten-free",
+  "dairy-free": "Dairy-free",
   spicy: "Spicy",
   new: "New",
   bestseller: "Bestseller",

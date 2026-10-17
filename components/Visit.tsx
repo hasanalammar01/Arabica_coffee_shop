@@ -1,33 +1,19 @@
 import { site } from "@/data/site";
+import { contactActions, isExternal } from "@/lib/contact";
 import { formatDays, formatTime } from "@/lib/hours";
+import { pick, t, type Lang } from "@/lib/i18n";
 import { OpenStatus } from "./OpenStatus";
+import { SpecialHoursNotice } from "./SpecialHoursNotice";
 
-/** mapsQuery is either a pasted Google Maps link or a place name to search for. */
-export const mapsIsLink = /^https?:\/\//.test(site.mapsQuery ?? "");
-export const mapsLink = mapsIsLink
-  ? site.mapsQuery
-  : site.mapsQuery && `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.mapsQuery)}`;
-
-const digits = (n: string) => n.replace(/[^\d]/g, "");
-
-/** Contact actions; only the ones filled in data/site.ts are shown. */
-const ACTIONS = [
-  site.phone && { href: `tel:${site.phone}`, label: "Call us" },
-  site.whatsapp && { href: `https://wa.me/${digits(site.whatsapp)}`, label: "WhatsApp" },
-  mapsLink && { href: mapsLink, label: "Get directions" },
-  site.instagram && { href: site.instagram, label: "Instagram" },
-  site.email && { href: `mailto:${site.email}`, label: "Email" },
-].filter((a): a is { href: string; label: string } => Boolean(a));
-
-export function HoursTable() {
-  if (!site.hours?.length) return <p className="text-muted">Opening hours coming soon.</p>;
+export function HoursTable({ lang }: { lang: Lang }) {
+  if (!site.hours.length) return <p className="text-muted">{t(lang).visit.hoursSoon}</p>;
   return (
     <dl className="divide-y divide-line border-y border-line">
       {site.hours.map((h) => (
         <div key={h.days.join()} className="flex justify-between gap-4 py-3">
-          <dt>{formatDays(h.days)}</dt>
-          <dd className="text-right tabular-nums">
-            {formatTime(h.open)} – {formatTime(h.close)}
+          <dt>{formatDays(h.days, lang)}</dt>
+          <dd className="text-end tabular-nums">
+            {formatTime(h.open, lang)} – {formatTime(h.close, lang)}
           </dd>
         </div>
       ))}
@@ -35,20 +21,22 @@ export function HoursTable() {
   );
 }
 
-export function ContactActions() {
-  if (!ACTIONS.length) return null;
+export function ContactActions({ lang }: { lang: Lang }) {
+  if (!contactActions.length) return null;
+  const d = t(lang).visit;
+  const label = { call: d.call, whatsapp: d.whatsapp, directions: d.directions, instagram: d.instagram, email: d.email };
   return (
     <ul className="flex flex-wrap gap-2">
-      {ACTIONS.map((a, i) => (
-        <li key={a.label}>
+      {contactActions.map((a, i) => (
+        <li key={a.kind}>
           <a
             href={a.href}
-            {...(a.href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" })}
+            {...(isExternal(a.href) && { target: "_blank", rel: "noopener noreferrer" })}
             className={`inline-flex min-h-11 items-center rounded-full px-5 font-medium transition-colors ${
               i === 0 ? "bg-espresso text-on-espresso hover:bg-ink" : "border border-line hover:border-ink"
             }`}
           >
-            {a.label}
+            {label[a.kind]}
           </a>
         </li>
       ))}
@@ -56,22 +44,27 @@ export function ContactActions() {
   );
 }
 
-export function Visit({ headingLevel: H = "h2" }: { headingLevel?: "h1" | "h2" }) {
+export function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLevel?: "h1" | "h2" }) {
+  const d = t(lang).visit;
+  const address = pick(lang, site.address ?? "", site.addressAr);
   return (
     <div className="grid gap-8 md:grid-cols-2 md:gap-16">
       <div>
         <div className="flex flex-wrap items-center gap-3">
-          <H className="font-display text-title">Hours</H>
-          <OpenStatus />
+          <H className="font-display text-title">{d.hours}</H>
+          <OpenStatus lang={lang} />
         </div>
+        <SpecialHoursNotice lang={lang} />
         <div className="mt-6">
-          <HoursTable />
+          <HoursTable lang={lang} />
         </div>
       </div>
       <div className="flex flex-col gap-5">
-        <h2 className="font-display text-title">Find us</h2>
-        <address className="text-lg text-muted not-italic">{site.address ?? "Address coming soon."}</address>
-        <ContactActions />
+        <h2 className="font-display text-title">{d.findUs}</h2>
+        {address && <address className="text-lg whitespace-pre-line text-muted not-italic">{address}</address>}
+        {/* Nothing to show yet: one honest line instead of empty headings. */}
+        {!address && !contactActions.length && <p className="text-lg text-muted">{d.contactSoon}</p>}
+        <ContactActions lang={lang} />
       </div>
     </div>
   );

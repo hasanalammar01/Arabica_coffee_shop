@@ -49,7 +49,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
     let name = `${item.name} (copy)`;
     for (let n = 2; names.has(name); n++) name = `${item.name} (copy ${n})`;
     onEdit({
-      item: { ...item, key: newKey(), name },
+      item: { ...item, key: newKey(), id: "", name },
       sectionKey: section.key,
       isNew: true,
       afterKey: item.key,
