@@ -6,11 +6,11 @@ import { href, type Dict, type Lang } from "@/lib/i18n";
 import { Logo } from "./Logo";
 
 /** The same page in the other language: /menu ⇄ /ar/menu. */
-const switchPath = (lang: Lang, path: string) =>
-  lang === "ar" ? path.replace(/^\/ar(?=\/|$)/, "") || "/" : path === "/" ? "/ar" : `/ar${path}`;
+const publicPath = (lang: Lang, path: string) =>
+  href(lang, path.replace(/^\/(?:en|ar)(?=\/|$)/, "") || "/");
 
 export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLang"> & { brand: string } }) {
-  const path = usePathname();
+  const path = publicPath(lang, usePathname());
   const links = [
     { href: href(lang, "/menu"), label: d.nav.menu },
     { href: href(lang, "/about"), label: d.nav.about },
@@ -44,7 +44,7 @@ export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLa
           })}
           <li>
             <a
-              href={switchPath(lang, path)}
+              href={publicPath(lang === "ar" ? "en" : "ar", path)}
               lang={lang === "ar" ? "en" : "ar"}
               hrefLang={lang === "ar" ? "en" : "ar"}
               className="ms-1 flex min-h-11 min-w-11 items-center justify-center rounded-full border border-line px-3 text-sm font-medium hover:border-ink"
