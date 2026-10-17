@@ -184,11 +184,20 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               )}
 
               {rows.length > 0 && (
-                <ul className="mt-6 lg:columns-2 lg:gap-x-16">
-                  {rows.map((i) => (
-                    <MenuRow key={i.id} item={i} lang={lang} ordering={ordering} />
-                  ))}
-                </ul>
+                // Two lists side by side on wide screens (first half, then second half), not CSS
+                // columns: their balancing can push rows into an extra column off the page.
+                <div className="mt-6 grid items-start lg:grid-cols-2 lg:gap-x-16">
+                  {[rows.slice(0, Math.ceil(rows.length / 2)), rows.slice(Math.ceil(rows.length / 2))].map(
+                    (column, ci) =>
+                      column.length > 0 && (
+                        <ul key={ci}>
+                          {column.map((i) => (
+                            <MenuRow key={i.id} item={i} lang={lang} ordering={ordering} />
+                          ))}
+                        </ul>
+                      ),
+                  )}
+                </div>
               )}
 
               {addons.length > 0 && (

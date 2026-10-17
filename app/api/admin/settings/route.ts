@@ -9,6 +9,7 @@ import {
   sessionCookie,
 } from "@/lib/admin/auth";
 import { clientKey, dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
+import { readJson } from "@/lib/http";
 import { sendEmail, sendWhatsApp } from "@/lib/notify";
 import { cleanShopSettings } from "@/lib/orders-core";
 
@@ -38,7 +39,10 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const denied = await guard(req, true);
   if (denied) return denied;
-  const shop = cleanShopSettings(await req.json().catch(() => null));
+  const body = await readJson(req, 50_000);
+  // A broken or oversized body must never be saved as "empty settings".
+  if (!body || typeof body !== "object") return text("That change can't be saved.", 400);
+  const shop = cleanShopSettings(body);
   await saveSettings(shop);
   return NextResponse.json({ shop });
 }
@@ -49,7 +53,7 @@ const USERNAME = /^[a-z0-9._-]{3,40}$/i;
 export async function POST(req: NextRequest) {
   const denied = await guard(req, true);
   if (denied) return denied;
-  const body = ((await req.json().catch(() => null)) ?? {}) as Record<string, unknown>;
+  const body = ((await readJson(req, 5_000)) ?? {}) as Record<string, unknown>;
   const settings = await getSettings();
 
   if (body.action === "test") {

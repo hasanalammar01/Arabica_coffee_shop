@@ -9,6 +9,7 @@ import {
   sessionCookie,
 } from "@/lib/admin/auth";
 import { mode } from "@/lib/admin/store";
+import { readJson } from "@/lib/http";
 import { clearHits, clientKey, dbConfigured, limited, recordHit } from "@/lib/db";
 
 /** Is this browser signed in to the admin, and where will changes be saved? */
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   const key = clientKey(req.headers, "login");
   if (await limited(key, LOGIN_TRIES, 15))
     return new NextResponse("Too many wrong passwords. Wait 15 minutes, then try again.", { status: 429 });
-  const { username, password } = (await req.json().catch(() => ({}))) as { username?: unknown; password?: unknown };
+  const { username, password } = ((await readJson(req, 2_000)) ?? {}) as { username?: unknown; password?: unknown };
   if (typeof username !== "string" || typeof password !== "string" || !(await credentialsMatch(username, password))) {
     await recordHit(key);
     await new Promise((r) => setTimeout(r, 1000));

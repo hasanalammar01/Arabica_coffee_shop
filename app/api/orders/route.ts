@@ -4,6 +4,7 @@ import { site } from "@/data/site";
 import { addOrder, clientKey, dbConfigured, getSettings, limited, recordHit } from "@/lib/db";
 import { localTime, openNow } from "@/lib/hours";
 import { buildMenu, publicMenu } from "@/lib/menu-core";
+import { readJson } from "@/lib/http";
 import { notifyAdmin } from "@/lib/notify";
 import { orderMessage, paymentReady, validateOrder, type PublicPayment } from "@/lib/orders-core";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   if (await limited(key, ORDERS_PER_10_MIN, 10)) return NextResponse.json({ error: "tooMany" }, { status: 429 });
 
   const settings = await getSettings();
-  const result = validateOrder(await req.json().catch(() => null), { menu, settings, open: shopOpen() });
+  const result = validateOrder(await readJson(req, 20_000), { menu, settings, open: shopOpen() });
   if ("error" in result) return NextResponse.json(result, { status: 400 });
 
   const order = await addOrder(result.order);

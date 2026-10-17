@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSignedIn, sameOrigin } from "@/lib/admin/auth";
 import { dbConfigured, ordersOverview, setOrderStatus } from "@/lib/db";
+import { readJson } from "@/lib/http";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/orders-core";
 
 const text = (message: string, status: number) => new NextResponse(message, { status });
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const denied = await guard(req, true);
   if (denied) return denied;
-  const { id, status } = ((await req.json().catch(() => null)) ?? {}) as { id?: unknown; status?: unknown };
+  const { id, status } = ((await readJson(req, 1_000)) ?? {}) as { id?: unknown; status?: unknown };
   if (!Number.isInteger(id) || !ORDER_STATUSES.includes(status as OrderStatus)) return text("Bad request.", 400);
   if (!(await setOrderStatus(id as number, status as OrderStatus))) return text("That order doesn't exist.", 404);
   return new NextResponse(null, { status: 204 });

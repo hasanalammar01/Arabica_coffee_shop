@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSignedIn, sameOrigin } from "@/lib/admin/auth";
 import { ALLOWED, mode, publish, readText, StoreError } from "@/lib/admin/store";
+import { readJson } from "@/lib/http";
 
 const text = (message: string, status: number) => new NextResponse(message, { status });
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!(await isSignedIn(req))) return text("Your session ended. Sign in again, then publish.", 401);
   if (!mode()) return text(NOT_SET_UP, 503);
 
-  const body = (await req.json().catch(() => null)) as {
+  const body = (await readJson(req, MAX_FILE * 10 + 10_000)) as {
     message?: unknown;
     files?: { path?: unknown; content?: unknown }[];
     base?: Record<string, unknown>;
