@@ -117,7 +117,7 @@ npm run qr                                   # uses url from data/site.json + /m
 npm run qr -- https://your-domain.com/menu   # or any URL
 ```
 
-Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px). No QR code is published yet on purpose: generate it only once the final domain is set (`url` in `data/site.json`), because printed codes can't be changed later.
+Writes `public/qr-menu.svg` (for print) and `public/qr-menu.png` (1200px), with the Arabica logo in the middle (high error correction keeps it scannable). The current code points at `https://arabica-deli-cafe.vercel.app/menu`. Printed codes can't be changed, so if the site ever moves to another domain, keep this address redirecting to it in Vercel → Domains.
 
 ## Analytics (off by default)
 
