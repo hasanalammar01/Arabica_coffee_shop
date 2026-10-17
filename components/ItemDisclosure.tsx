@@ -95,7 +95,7 @@ export function ItemDisclosure({
       {/* Keep both states mounted so CSS can reverse smoothly during repeated taps. */}
       <div id={`${id}-panel`} className="item-info-reveal" aria-hidden={!expanded} inert={!expanded}>
         <div className="min-h-0 overflow-hidden">
-          <div className="my-2 space-y-3 rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm leading-relaxed text-muted">
+          <div className="item-info-panel my-2 space-y-3 rounded-xl border border-line bg-surface/70 px-4 py-3 text-sm leading-relaxed text-muted">
             {details}
           </div>
         </div>

@@ -25,7 +25,7 @@ export function DrinkCard({
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <article className={`group ${soldOut ? "opacity-60" : ""}`}>
+    <article className={`menu-reveal group ${soldOut ? "opacity-60" : ""}`}>
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${t(lang).menu.details}`}
@@ -52,11 +52,6 @@ export function DrinkCard({
               <span className="leader sm:hidden" aria-hidden />
               <Price prices={item.prices} sizesAr={item.sizesAr} lang={lang} className="sm:text-muted" />
             </div>
-            {item.options && (
-              <p className="mt-1 text-sm text-muted">
-                {item.options.map((o, i) => pick(lang, o, item.optionsAr?.[i])).join(" · ")}
-              </p>
-            )}
             {details && <InfoHint lang={lang} />}
           </div>
         </div>

@@ -1108,6 +1108,15 @@
     border: 1px solid var(--line);
     font-size: 13px;
   }
+  & .live-preview > .preview-tab > p {
+    margin: 0;
+  }
+  & .live-preview > .preview-tab > p + p {
+    margin-top: 8px;
+  }
+  & .live-preview > .preview-tab b {
+    display: block;
+  }
   & .live-preview > .preview-tab::before {
     content: "";
     position: absolute;

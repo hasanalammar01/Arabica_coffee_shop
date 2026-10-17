@@ -462,7 +462,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
           <section className="form-section">
             <div className="section-title">
               <h2>Choices and tags</h2>
-              <p>Add options that do not change the price.</p>
+              <p>Add options that do not change the price. Guests see them when they tap the item.</p>
             </div>
             <Field label="Flavours / choices" hint="Choices that don't change the price, e.g. Peach, Lemon.">
               <div className="chip-input">
@@ -761,13 +761,34 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                   <b>{previewPrice}</b>
                 </div>
               )}
-              {item.options.length > 0 && <p>{item.options.join(" · ")}</p>}
               <Tags values={item.tags} addon={item.addon} />
               {item.availability !== "available" && (
                 <p className={`preview-status ${item.availability}`}>{AVAILABILITY_LABELS[item.availability]}</p>
               )}
               {/* Shown open here; on the menu it opens when guests tap the item. */}
-              {item.description && <p className="preview-tab">{item.description}</p>}
+              {(item.description || item.options.length > 0 || item.ingredients || item.allergens.length > 0) && (
+                <div className="preview-tab">
+                  {item.description && <p>{item.description}</p>}
+                  {item.options.length > 0 && (
+                    <p>
+                      <b>Choose from</b>
+                      {item.options.join(" · ")}
+                    </p>
+                  )}
+                  {item.ingredients && (
+                    <p>
+                      <b>Ingredients</b>
+                      {item.ingredients}
+                    </p>
+                  )}
+                  {item.allergens.length > 0 && (
+                    <p>
+                      <b>Contains</b>
+                      {item.allergens.map((a) => t("en").allergens[a]).join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </aside>

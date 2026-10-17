@@ -11,13 +11,26 @@ export function itemDetails(item: MenuItem, lang: Lang) {
   const description = pick(lang, item.description ?? "", item.descriptionAr).trim();
   const ingredients = pick(lang, item.ingredients ?? "", item.ingredientsAr).trim();
   const allergens = item.allergens ?? [];
-  if (!description && !ingredients && !allergens.length) return null;
+  const options = (item.options ?? []).map((o, i) => pick(lang, o, item.optionsAr?.[i]));
+  if (!description && !options.length && !ingredients && !allergens.length) return null;
   return (
     <>
       {description && (
         <p dir="auto" className="[overflow-wrap:anywhere]">
           {description}
         </p>
+      )}
+      {options.length > 0 && (
+        <div>
+          <p className="mb-1 font-medium text-ink">{d.menu.options}</p>
+          <ul className="space-y-0.5">
+            {options.map((o) => (
+              <li key={o} dir="auto" className="[overflow-wrap:anywhere]">
+                {o}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {ingredients && (
         <p className="[overflow-wrap:anywhere]">

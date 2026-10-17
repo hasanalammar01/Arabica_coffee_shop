@@ -158,7 +158,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               aria-labelledby={`${c.id}-title`}
               className="scroll-mt-20 break-inside-avoid-page pt-14"
             >
-              <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
+              <div className="menu-reveal flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
                 <h2 id={`${c.id}-title`} className="font-display text-title">
                   {pick(lang, c.name, c.nameAr)}
                 </h2>
@@ -202,7 +202,7 @@ function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; sm
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <li className={`break-inside-avoid ${soldOut ? "opacity-60" : ""}`}>
+    <li className={`menu-reveal break-inside-avoid ${soldOut ? "opacity-60" : ""}`}>
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${d.menu.details}`}
@@ -217,11 +217,6 @@ function MenuRow({ item, lang, small = false }: { item: MenuItem; lang: Lang; sm
           <span className="leader" aria-hidden />
           <Price prices={item.prices} sizesAr={item.sizesAr} lang={lang} />
         </div>
-        {item.options && (
-          <p className="mt-1 text-sm text-muted">
-            {item.options.map((o, i) => pick(lang, o, item.optionsAr?.[i])).join(" · ")}
-          </p>
-        )}
         {item.tags && item.tags.length > 0 && (
           <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={d.menu.tags}>
             {item.tags.map((tg) => (

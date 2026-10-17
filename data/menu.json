@@ -8,6 +8,8 @@
           "name": "Espresso",
           "nameAr": "إسبريسو",
           "arDraft": true,
+          "description": "A short, strong shot of freshly pulled espresso.",
+          "descriptionAr": "جرعة قصيرة ومركّزة من الإسبريسو المحضّر عند الطلب.",
           "price": 90000,
           "image": "/menu/espresso.webp"
         },
@@ -16,6 +18,8 @@
           "name": "Cappuccino",
           "nameAr": "كابتشينو",
           "arDraft": true,
+          "description": "Espresso with steamed milk and a thick layer of milk foam.",
+          "descriptionAr": "إسبريسو مع حليب مبخّر وطبقة كثيفة من رغوة الحليب.",
           "price": 315000,
           "image": "/menu/cappuccino.webp"
         },
@@ -24,6 +28,8 @@
           "name": "Caffè Latte",
           "nameAr": "كافيه لاتيه",
           "arDraft": true,
+          "description": "Espresso with plenty of steamed milk and a light layer of foam.",
+          "descriptionAr": "إسبريسو مع كمية وافرة من الحليب المبخّر وطبقة خفيفة من الرغوة.",
           "price": 360000,
           "image": "/menu/caffe-latte.webp"
         },
@@ -32,6 +38,8 @@
           "name": "Hot Chocolate",
           "nameAr": "شوكولا ساخنة",
           "arDraft": true,
+          "description": "Rich chocolate melted into hot steamed milk.",
+          "descriptionAr": "شوكولا غنية مذوّبة في حليب ساخن.",
           "price": 390000,
           "image": "/menu/hot-chocolate.webp"
         },
@@ -40,6 +48,8 @@
           "name": "Special Tea",
           "nameAr": "شاي مميّز",
           "arDraft": true,
+          "description": "Premium tea infusions. Choose your blend.",
+          "descriptionAr": "منقوعات شاي مميّزة. اختر النكهة التي تفضّلها.",
           "price": 200000,
           "options": [
             "Spanish White Peach & Ginger",
@@ -62,6 +72,8 @@
           "name": "Double Espresso",
           "nameAr": "إسبريسو دبل",
           "arDraft": true,
+          "description": "Two shots of espresso for a stronger cup.",
+          "descriptionAr": "جرعتان من الإسبريسو لفنجان أقوى.",
           "price": 120000
         },
         {
@@ -69,6 +81,8 @@
           "name": "Americano",
           "nameAr": "أمريكانو",
           "arDraft": true,
+          "description": "Espresso topped up with hot water: smooth and long.",
+          "descriptionAr": "إسبريسو مع ماء ساخن، طعم ناعم وكوب أطول.",
           "price": 100000
         },
         {
@@ -83,6 +97,8 @@
           "name": "Nescafé",
           "nameAr": "نسكافيه",
           "arDraft": true,
+          "description": "Classic instant coffee.",
+          "descriptionAr": "قهوة نسكافيه سريعة التحضير الكلاسيكية.",
           "price": 270000
         },
         {
@@ -90,6 +106,8 @@
           "name": "Caramel Macchiato",
           "nameAr": "كراميل ماكياتو",
           "arDraft": true,
+          "description": "Steamed milk marked with espresso and finished with caramel sauce.",
+          "descriptionAr": "حليب مبخّر مع الإسبريسو وصلصة الكراميل.",
           "price": 400000
         }
       ],
@@ -104,6 +122,8 @@
           "name": "Chocolate",
           "nameAr": "شوكولا",
           "arDraft": true,
+          "description": "Thick milkshake blended with ice cream and chocolate.",
+          "descriptionAr": "ميلك شيك كثيف مخفوق مع البوظة والشوكولا.",
           "price": 450000,
           "image": "/menu/shake-chocolate.webp"
         },
@@ -112,6 +132,8 @@
           "name": "Strawberry",
           "nameAr": "فريز",
           "arDraft": true,
+          "description": "Thick milkshake blended with ice cream and strawberries.",
+          "descriptionAr": "ميلك شيك كثيف مخفوق مع البوظة والفريز.",
           "price": 450000,
           "image": "/menu/shake-strawberry.webp"
         },
@@ -120,6 +142,8 @@
           "name": "Caramel",
           "nameAr": "كراميل",
           "arDraft": true,
+          "description": "Thick milkshake blended with ice cream and caramel.",
+          "descriptionAr": "ميلك شيك كثيف مخفوق مع البوظة والكراميل.",
           "price": 450000,
           "image": "/menu/shake-caramel.webp"
         },
@@ -128,6 +152,8 @@
           "name": "Mango",
           "nameAr": "مانغو",
           "arDraft": true,
+          "description": "Thick milkshake blended with ice cream and mango.",
+          "descriptionAr": "ميلك شيك كثيف مخفوق مع البوظة والمانغو.",
           "price": 450000,
           "image": "/menu/shake-mango.webp"
         }
@@ -143,6 +169,8 @@
           "name": "Mango Passion",
           "nameAr": "مانغو باشن",
           "arDraft": true,
+          "description": "Mango and passion fruit blended with ice.",
+          "descriptionAr": "مانغو وباشن فروت مخفوقان مع الثلج.",
           "price": 400000,
           "image": "/menu/smoothie-mango-passion.webp"
         },
@@ -151,6 +179,8 @@
           "name": "Kiwi Apple",
           "nameAr": "كيوي وتفاح",
           "arDraft": true,
+          "description": "Kiwi and apple blended with ice.",
+          "descriptionAr": "كيوي وتفاح مخفوقان مع الثلج.",
           "price": 400000,
           "image": "/menu/smoothie-kiwi-apple.webp"
         },
@@ -159,6 +189,8 @@
           "name": "Mix Berries",
           "nameAr": "توت مشكّل",
           "arDraft": true,
+          "description": "Mixed berries blended with ice.",
+          "descriptionAr": "توت مشكّل مخفوق مع الثلج.",
           "price": 450000,
           "image": "/menu/smoothie-mix-berries.webp"
         },
@@ -167,6 +199,8 @@
           "name": "Mint Lemonade",
           "nameAr": "ليموناضة بالنعناع",
           "arDraft": true,
+          "description": "Lemon and fresh mint blended with ice.",
+          "descriptionAr": "ليمون ونعناع طازج مخفوقان مع الثلج.",
           "price": 400000
         },
         {
@@ -174,6 +208,8 @@
           "name": "Strawberry Lychee",
           "nameAr": "فريز وليتشي",
           "arDraft": true,
+          "description": "Strawberry and lychee blended with ice.",
+          "descriptionAr": "فريز وليتشي مخفوقان مع الثلج.",
           "price": 400000
         },
         {
@@ -181,6 +217,8 @@
           "name": "Piña Colada",
           "nameAr": "بينا كولادا",
           "arDraft": true,
+          "description": "Pineapple and coconut blended with ice. Alcohol-free.",
+          "descriptionAr": "أناناس وجوز الهند مخفوقان مع الثلج. بدون كحول.",
           "price": 400000
         },
         {
@@ -188,6 +226,8 @@
           "name": "Blueberry Mango",
           "nameAr": "توت أزرق ومانغو",
           "arDraft": true,
+          "description": "Blueberry and mango blended with ice.",
+          "descriptionAr": "توت أزرق ومانغو مخفوقان مع الثلج.",
           "price": 400000
         },
         {
@@ -195,6 +235,8 @@
           "name": "Mango Strawberry",
           "nameAr": "مانغو وفريز",
           "arDraft": true,
+          "description": "Mango and strawberry blended with ice.",
+          "descriptionAr": "مانغو وفريز مخفوقان مع الثلج.",
           "price": 400000
         },
         {
@@ -202,6 +244,8 @@
           "name": "Cotton Candy",
           "nameAr": "غزل البنات",
           "arDraft": true,
+          "description": "A sweet, cotton-candy-flavoured smoothie.",
+          "descriptionAr": "سموذي حلو بنكهة غزل البنات.",
           "price": 400000
         }
       ],
@@ -216,6 +260,8 @@
           "name": "Iced Latte",
           "nameAr": "آيس لاتيه",
           "arDraft": true,
+          "description": "Espresso poured over cold milk and ice.",
+          "descriptionAr": "إسبريسو فوق حليب بارد وثلج.",
           "price": 400000,
           "image": "/menu/iced-latte.webp"
         },
@@ -224,6 +270,8 @@
           "name": "Caramel Frappé",
           "nameAr": "كراميل فرابيه",
           "arDraft": true,
+          "description": "Coffee blended with milk, ice and caramel.",
+          "descriptionAr": "قهوة مخفوقة مع الحليب والثلج والكراميل.",
           "price": 400000,
           "image": "/menu/caramel-frappe.webp"
         },
@@ -232,6 +280,8 @@
           "name": "Cappuccino Freddo",
           "nameAr": "كابتشينو فريدو",
           "arDraft": true,
+          "description": "Iced espresso topped with cold milk foam.",
+          "descriptionAr": "إسبريسو مثلّج تعلوه رغوة حليب باردة.",
           "price": 315000,
           "image": "/menu/cappuccino-freddo.webp"
         },
@@ -240,6 +290,8 @@
           "name": "Iced Americano",
           "nameAr": "آيس أمريكانو",
           "arDraft": true,
+          "description": "Espresso and cold water over ice.",
+          "descriptionAr": "إسبريسو مع ماء بارد وثلج.",
           "price": 120000,
           "image": "/menu/iced-americano.webp"
         },
@@ -248,6 +300,8 @@
           "name": "Espresso Freddo",
           "nameAr": "إسبريسو فريدو",
           "arDraft": true,
+          "description": "Espresso shaken with ice until frothy, served cold.",
+          "descriptionAr": "إسبريسو مخفوق مع الثلج حتى تتكوّن رغوته، يقدَّم بارداً.",
           "price": 120000
         },
         {
@@ -255,6 +309,8 @@
           "name": "Frappé Coffee",
           "nameAr": "قهوة فرابيه",
           "arDraft": true,
+          "description": "Coffee whipped with ice into a frothy, chilled drink.",
+          "descriptionAr": "قهوة مخفوقة مع الثلج حتى تصبح رغوية ومنعشة.",
           "price": 200000
         },
         {
@@ -262,6 +318,8 @@
           "name": "Chocolate Frappé",
           "nameAr": "شوكولا فرابيه",
           "arDraft": true,
+          "description": "Chocolate blended with milk and ice.",
+          "descriptionAr": "شوكولا مخفوقة مع الحليب والثلج.",
           "price": 400000
         },
         {
@@ -269,6 +327,8 @@
           "name": "Homemade Iced Tea",
           "nameAr": "آيس تي منزلي",
           "arDraft": true,
+          "description": "Tea brewed in house and served over ice. Choose your flavour.",
+          "descriptionAr": "شاي محضّر في المقهى يقدَّم مع الثلج. اختر النكهة.",
           "price": 270000,
           "options": [
             "Peach",
@@ -307,6 +367,8 @@
           "name": "Rim Sparkling",
           "nameAr": "ريم فوّار",
           "arDraft": true,
+          "description": "Chilled sparkling water.",
+          "descriptionAr": "مياه فوّارة مبرّدة.",
           "price": 120000
         },
         {
@@ -340,6 +402,8 @@
           "name": "Brownies",
           "nameAr": "براونيز",
           "arDraft": true,
+          "description": "Rich, fudgy chocolate brownie.",
+          "descriptionAr": "براونيز شوكولا غنية وطريّة.",
           "price": 400000,
           "image": "/menu/brownies.webp"
         },
@@ -348,6 +412,8 @@
           "name": "Cheesecake",
           "nameAr": "تشيز كيك",
           "arDraft": true,
+          "description": "Creamy cheesecake on a biscuit base.",
+          "descriptionAr": "تشيز كيك كريمية على قاعدة من البسكويت.",
           "price": 270000
         },
         {
@@ -362,6 +428,8 @@
           "name": "Custard",
           "nameAr": "كاسترد",
           "arDraft": true,
+          "description": "Smooth, chilled custard.",
+          "descriptionAr": "كاسترد ناعم ومبرّد.",
           "price": 120000
         },
         {
@@ -369,6 +437,8 @@
           "name": "Nuts",
           "nameAr": "مكسّرات",
           "arDraft": true,
+          "description": "Mixed roasted nuts.",
+          "descriptionAr": "مكسّرات مشكّلة محمّصة.",
           "price": 250000
         }
       ],
@@ -383,6 +453,8 @@
           "name": "Zaatar",
           "nameAr": "زعتر",
           "arDraft": true,
+          "description": "Saj bread spread with zaatar and olive oil, baked on the dome griddle.",
+          "descriptionAr": "خبز صاج مدهون بالزعتر وزيت الزيتون، مخبوز على الصاج.",
           "price": 120000
         },
         {
@@ -390,6 +462,8 @@
           "name": "Cheese",
           "nameAr": "جبنة",
           "arDraft": true,
+          "description": "Saj bread with melted cheese.",
+          "descriptionAr": "خبز صاج مع جبنة ذائبة.",
           "price": 230000
         },
         {
@@ -404,6 +478,8 @@
           "name": "Turkey & Cheese",
           "nameAr": "حبش وجبنة",
           "arDraft": true,
+          "description": "Saj with sliced turkey and melted cheese.",
+          "descriptionAr": "صاج مع شرائح الحبش والجبنة الذائبة.",
           "price": 375000
         },
         {
@@ -411,6 +487,8 @@
           "name": "Labneh",
           "nameAr": "لبنة",
           "arDraft": true,
+          "description": "Saj spread with creamy labneh.",
+          "descriptionAr": "صاج مع اللبنة الكريمية.",
           "price": 180000
         },
         {
@@ -418,6 +496,8 @@
           "name": "Labneh & Makdous",
           "nameAr": "لبنة ومكدوس",
           "arDraft": true,
+          "description": "Labneh with makdous: baby aubergines stuffed with walnuts and pepper, cured in olive oil.",
+          "descriptionAr": "لبنة مع المكدوس: باذنجان صغير محشو بالجوز والفليفلة ومحفوظ بزيت الزيتون.",
           "price": 200000
         },
         {
@@ -425,6 +505,8 @@
           "name": "Bandoura & Basal",
           "nameAr": "بندورة وبصل",
           "arDraft": true,
+          "description": "Saj with tomato and onion.",
+          "descriptionAr": "صاج مع البندورة والبصل.",
           "price": 200000
         },
         {
@@ -432,6 +514,8 @@
           "name": "Nutella",
           "nameAr": "نوتيلا",
           "arDraft": true,
+          "description": "Warm saj spread with Nutella.",
+          "descriptionAr": "صاج ساخن مع النوتيلا.",
           "price": 200000
         },
         {
@@ -439,6 +523,8 @@
           "name": "Nutella & Banana",
           "nameAr": "نوتيلا وموز",
           "arDraft": true,
+          "description": "Warm saj with Nutella and sliced banana.",
+          "descriptionAr": "صاج ساخن مع النوتيلا وشرائح الموز.",
           "price": 200000
         },
         {
@@ -446,6 +532,8 @@
           "name": "Add Cheese",
           "nameAr": "إضافة جبنة",
           "arDraft": true,
+          "description": "Extra cheese on any saj.",
+          "descriptionAr": "جبنة إضافية على أي صاج.",
           "price": 100000,
           "addon": true
         },
@@ -454,6 +542,8 @@
           "name": "Khodra (vegetables)",
           "nameAr": "خضرة",
           "arDraft": true,
+          "description": "Fresh vegetables added to your saj.",
+          "descriptionAr": "خضار طازجة تضاف إلى الصاج.",
           "price": 70000,
           "addon": true
         }
@@ -469,6 +559,8 @@
           "name": "Mouassal",
           "nameAr": "معسّل",
           "arDraft": true,
+          "description": "Flavoured shisha tobacco. Ask for today's flavours.",
+          "descriptionAr": "معسّل بنكهات متنوعة. اسأل عن النكهات المتوفرة اليوم.",
           "price": 400000
         },
         {
@@ -483,6 +575,8 @@
           "name": "Ajami",
           "nameAr": "عجمي",
           "arDraft": true,
+          "description": "Traditional unflavoured shisha tobacco with a strong taste.",
+          "descriptionAr": "تنباك عجمي تقليدي بدون نكهات، طعمه قوي.",
           "price": 500000
         },
         {
@@ -490,6 +584,8 @@
           "name": "Add Ras (extra head)",
           "nameAr": "راس إضافي",
           "arDraft": true,
+          "description": "An extra head for your shisha.",
+          "descriptionAr": "راس إضافي للأرجيلة.",
           "price": 200000,
           "addon": true
         }
