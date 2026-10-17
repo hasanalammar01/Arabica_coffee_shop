@@ -8,15 +8,46 @@ import type { MenuCategory, MenuItem } from "../data/menu.ts";
 export const ORDER_STATUSES = ["new", "accepted", "done", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/**
+ * Each kind asks the admin for its own details. Only details a customer needs to *pay the
+ * café* are stored: never card numbers or CVVs (card payments happen on a card machine).
+ */
+export const PAYMENT_KINDS = ["cash", "whish", "card", "bank", "other"] as const;
+export type PaymentKind = (typeof PAYMENT_KINDS)[number];
+
 export type PaymentMethod = {
   id: string;
+  kind: PaymentKind;
   name: string;
   nameAr: string;
-  /** Instructions shown to the customer, e.g. "Send to Whish 03 123 456". */
+  enabled: boolean;
+  /** whish: the number to send to. */
+  phone: string;
+  /** whish, bank: whose account it is. */
+  accountName: string;
+  /** card: accepted cards, e.g. "Visa, Mastercard". */
+  cards: string;
+  /** bank */
+  bank: string;
+  iban: string;
+  /** An extra note (for "other", the whole instructions). */
   details: string;
   detailsAr: string;
-  enabled: boolean;
 };
+
+/** The fields each kind must have before customers are offered it. */
+export const REQUIRED_FIELDS: Record<PaymentKind, (keyof PaymentMethod)[]> = {
+  cash: [],
+  whish: ["phone", "accountName"],
+  card: ["cards"],
+  bank: ["bank", "accountName", "iban"],
+  other: ["details"],
+};
+
+export const paymentReady = (p: PaymentMethod) => p.enabled && REQUIRED_FIELDS[p.kind].every((f) => String(p[f]).trim());
+
+/** Everything a customer may see about a method (the public API sends this). */
+export type PublicPayment = Omit<PaymentMethod, "enabled">;
 
 /** What the admin edits under Online orders and Settings (everything except the login). */
 export type ShopSettings = {
@@ -34,10 +65,10 @@ export const DEFAULT_SETTINGS: Settings = {
   passwordHash: "",
   ordersEnabled: false,
   payments: [
-    { id: "cash", name: "Cash on delivery", nameAr: "الدفع نقداً عند الاستلام", details: "", detailsAr: "", enabled: true },
-    { id: "whish", name: "Whish Money", nameAr: "ويش موني", details: "", detailsAr: "", enabled: false },
-    { id: "card", name: "Card on delivery", nameAr: "بطاقة عند الاستلام", details: "", detailsAr: "", enabled: false },
-  ],
+    { id: "cash", kind: "cash", name: "Cash on delivery", nameAr: "الدفع نقداً عند الاستلام", enabled: true },
+    { id: "whish", kind: "whish", name: "Whish Money", nameAr: "ويش موني", enabled: false },
+    { id: "card", kind: "card", name: "Card on delivery", nameAr: "بطاقة عند الاستلام", enabled: false },
+  ].map((p) => ({ phone: "", accountName: "", cards: "", bank: "", iban: "", details: "", detailsAr: "", ...p }) as PaymentMethod),
   whatsapp: { enabled: false, phone: "", apiKey: "" },
   email: { enabled: false, address: "" },
 };
@@ -53,15 +84,24 @@ export function cleanShopSettings(input: unknown): ShopSettings {
   const e = obj(s.email);
   const payments = (Array.isArray(s.payments) ? s.payments : DEFAULT_SETTINGS.payments)
     .slice(0, 12)
-    .map((raw, i) => {
+    .map((raw, i): PaymentMethod => {
       const p = obj(raw);
+      const id = str(p.id, 40) || `method-${i + 1}`;
+      // Methods saved before kinds existed: the default ids name their kind.
+      const kind = [p.kind, id].find((k): k is PaymentKind => PAYMENT_KINDS.includes(k as PaymentKind)) ?? "other";
       return {
-        id: str(p.id, 40) || `method-${i + 1}`,
+        id,
+        kind,
         name: str(p.name, 60),
         nameAr: str(p.nameAr, 60),
+        enabled: bool(p.enabled),
+        phone: str(p.phone, 20),
+        accountName: str(p.accountName, 80),
+        cards: str(p.cards, 80),
+        bank: str(p.bank, 80),
+        iban: str(p.iban, 40),
         details: str(p.details, 300),
         detailsAr: str(p.detailsAr, 300),
-        enabled: bool(p.enabled),
       };
     })
     .filter((p) => p.name);
@@ -135,7 +175,7 @@ export const menuItems = (menu: MenuCategory[]) => new Map(menu.flatMap((c) => c
 
 /* ---------- Placing an order ---------- */
 
-export type OrderError = "disabled" | "closed" | "unavailable" | "invalid";
+export type OrderError = "disabled" | "closed" | "unavailable" | "invalid" | "tooMany";
 
 export type NewOrder = {
   name: string;
@@ -166,7 +206,7 @@ export function validateOrder(
   const phone = str(b.phone, 20);
   const fulfilment = b.fulfilment === "pickup" ? "pickup" : b.fulfilment === "delivery" ? "delivery" : null;
   const address = fulfilment === "delivery" ? str(b.address, 300) : "";
-  const payment = settings.payments.find((p) => p.enabled && p.id === b.payment);
+  const payment = settings.payments.find((p) => paymentReady(p) && p.id === b.payment);
   if (name.length < 2 || !PHONE.test(phone) || !fulfilment || (fulfilment === "delivery" && address.length < 5) || !payment)
     return { error: "invalid" };
 

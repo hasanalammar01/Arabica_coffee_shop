@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { site } from "../data/site.ts";
 import {
@@ -42,12 +43,46 @@ async function db() {
       lang text not null default 'en'
     )`;
     await sql`create index if not exists orders_created_at on orders (created_at desc)`;
+    await sql`create table if not exists hits (key text not null, at timestamptz not null default now())`;
+    await sql`create index if not exists hits_key_at on hits (key, at)`;
   })().catch((e) => {
     ready = null; // try again on the next request
     throw e;
   });
   await ready;
   return sql;
+}
+
+/* ---------- Rate limits (wrong passwords, order spam) ---------- */
+
+/**
+ * Who is asking, as a hash of their IP (Vercel sets x-real-ip; the raw address is never stored).
+ * ponytail: per-IP only; people sharing one connection (a café's Wi-Fi) share the limit.
+ */
+export function clientKey(headers: Headers, purpose: string) {
+  const ip = headers.get("x-real-ip") || headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  return `${purpose}:${createHash("sha256").update(ip).digest("base64url").slice(0, 22)}`;
+}
+
+/** Has `key` been recorded `limit` times in the last `minutes`? Always false without a database. */
+export async function limited(key: string, limit: number, minutes: number) {
+  if (!dbConfigured()) return false;
+  const sql = await db();
+  const [row] = await sql`select count(*)::int as n from hits where key = ${key} and at > now() - make_interval(mins => ${minutes})`;
+  return Number(row.n) >= limit;
+}
+
+export async function recordHit(key: string) {
+  if (!dbConfigured()) return;
+  const sql = await db();
+  await sql`insert into hits (key) values (${key})`;
+  await sql`delete from hits where at < now() - interval '1 day'`;
+}
+
+export async function clearHits(key: string) {
+  if (!dbConfigured()) return;
+  const sql = await db();
+  await sql`delete from hits where key = ${key}`;
 }
 
 /* ---------- Settings ---------- */

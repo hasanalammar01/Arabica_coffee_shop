@@ -30,6 +30,10 @@ self.addEventListener("fetch", (e) => {
         }
         return res;
       })
-      .catch(() => caches.match(request).then((hit) => hit || caches.match("/menu"))),
+      // Offline: the saved copy; for a page that was never saved, the menu. Never answer a
+      // script, image or data request with the menu page.
+      .catch(() =>
+        caches.match(request).then((hit) => hit || (request.mode === "navigate" ? caches.match("/menu") : Response.error())),
+      ),
   );
 });

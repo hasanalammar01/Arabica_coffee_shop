@@ -49,7 +49,7 @@ export function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLev
   const address = pick(lang, site.address ?? "", site.addressAr);
   return (
     <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-      <div>
+      <div className="reveal">
         <div className="flex flex-wrap items-center gap-3">
           <H className="font-display text-title">{d.hours}</H>
           <OpenStatus lang={lang} />
@@ -59,7 +59,7 @@ export function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLev
           <HoursTable lang={lang} />
         </div>
       </div>
-      <div className="flex flex-col gap-5">
+      <div className="reveal flex flex-col gap-5">
         <h2 className="font-display text-title">{d.findUs}</h2>
         {address && <address className="text-lg whitespace-pre-line text-muted not-italic">{address}</address>}
         {/* Nothing to show yet: one honest line instead of empty headings. */}

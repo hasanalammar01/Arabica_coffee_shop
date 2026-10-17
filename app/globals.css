@@ -142,10 +142,10 @@ body {
   transition: transform 200ms var(--ease-out);
 }
 
-/* Menu items rise into place as they scroll into view. Browsers without scroll timelines just show them. */
+/* Content rises into place as it scrolls into view. Browsers without scroll timelines just show it. */
 @supports (animation-timeline: view()) {
   @media screen and (prefers-reduced-motion: no-preference) {
-    .menu-reveal {
+    .reveal {
       animation: rise linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 80%;
@@ -170,6 +170,23 @@ body {
 .drink-photo {
   transition: transform 160ms var(--ease-out);
 }
+/* Buttons that rise a little on hover and press in on tap. */
+.lift {
+  transition:
+    transform 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.lift:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px -12px rgb(0 0 0 / 0.55);
+  }
+}
 @media (hover: hover) and (pointer: fine) {
   .item-info-trigger:hover {
     background-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
@@ -184,8 +201,11 @@ body {
     animation: none;
   }
   .item-info-trigger:has(.item-info-button:active),
-  .item-info-trigger:hover .drink-photo {
-    transform: none;
+  .item-info-trigger:hover .drink-photo,
+  .lift:hover,
+  .lift:active,
+  img:hover {
+    transform: none !important;
   }
   html {
     scroll-behavior: auto;

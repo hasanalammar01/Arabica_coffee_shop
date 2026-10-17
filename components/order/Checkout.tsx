@@ -8,6 +8,7 @@ import { href, pick, t, type Lang } from "@/lib/i18n";
 import { menuItems, priceLine, type OrderError, type OrderLine } from "@/lib/orders-core";
 import { Stepper } from "./AddToCart";
 import { cart, useCart, useOrdering } from "./cart";
+import { PaymentInfo } from "./PaymentInfo";
 
 type Placed = { id: number; total: number; payment: string };
 
@@ -94,7 +95,6 @@ export function Checkout({ menu, lang }: { menu: MenuCategory[]; lang: Lang }) {
 
   if (placed) {
     const method = payments.find((p) => p.id === placed.payment);
-    const instructions = method && pick(lang, method.details, method.detailsAr);
     return (
       <div className={page} role="status">
         <p className="font-display text-hero">{d.thanks}</p>
@@ -104,8 +104,8 @@ export function Checkout({ menu, lang }: { menu: MenuCategory[]; lang: Lang }) {
         </p>
         {method && (
           <div className="mt-6 rounded-card border border-line bg-surface p-5">
-            <p className="font-medium">{pick(lang, method.name, method.nameAr)}</p>
-            {instructions && <p className="mt-1 whitespace-pre-line text-muted">{instructions}</p>}
+            <p className="mb-2 font-medium">{pick(lang, method.name, method.nameAr)}</p>
+            <PaymentInfo method={method} total={money(placed.total)} lang={lang} />
           </div>
         )}
         <p className="mt-6 text-muted">{d.callYou}</p>
@@ -257,18 +257,25 @@ export function Checkout({ menu, lang }: { menu: MenuCategory[]; lang: Lang }) {
       <fieldset className={section}>
         <legend className="text-lg font-medium">{d.payment}</legend>
         <div className="mt-3 grid gap-2">
-          {payments.map((p) => {
-            const details = pick(lang, p.details, p.detailsAr);
-            return (
-              <label key={p.id} className="flex cursor-pointer gap-3 rounded-xl border border-line bg-surface p-4 has-checked:border-espresso">
-                <input type="radio" name="payment" className="mt-1 accent-espresso" checked={chosen?.id === p.id} onChange={() => setPayment(p.id)} />
-                <span>
-                  <span className="font-medium">{pick(lang, p.name, p.nameAr)}</span>
-                  {details && chosen?.id === p.id && <span className="mt-1 block whitespace-pre-line text-sm text-muted">{details}</span>}
-                </span>
+          {payments.map((p) => (
+            <div key={p.id} className="rounded-xl border border-line bg-surface has-checked:border-espresso">
+              <label className="flex cursor-pointer items-center gap-3 p-4">
+                <input
+                  type="radio"
+                  name="payment"
+                  className="accent-espresso"
+                  checked={chosen?.id === p.id}
+                  onChange={() => setPayment(p.id)}
+                />
+                <span className="font-medium">{pick(lang, p.name, p.nameAr)}</span>
               </label>
-            );
-          })}
+              {chosen?.id === p.id && (
+                <div className="-mt-1 px-4 pb-4 ps-11">
+                  <PaymentInfo method={p} total={money(total)} lang={lang} />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </fieldset>
 

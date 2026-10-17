@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { MAX_QTY, type CartLine, type PaymentMethod } from "@/lib/orders-core";
+import { MAX_QTY, type CartLine, type PublicPayment } from "@/lib/orders-core";
 
 /* ---------- The cart: kept in this browser so it survives a reload ---------- */
 
@@ -71,7 +71,7 @@ export const cart = {
 export type OrderingConfig = {
   enabled: boolean;
   open: boolean;
-  payments: Omit<PaymentMethod, "enabled">[];
+  payments: PublicPayment[];
 };
 
 let config: Promise<OrderingConfig> | null = null;

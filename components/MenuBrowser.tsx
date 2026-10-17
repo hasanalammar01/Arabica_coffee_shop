@@ -162,7 +162,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
               aria-labelledby={`${c.id}-title`}
               className="scroll-mt-20 break-inside-avoid-page pt-14"
             >
-              <div className="menu-reveal flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
+              <div className="reveal flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
                 <h2 id={`${c.id}-title`} className="font-display text-title">
                   {pick(lang, c.name, c.nameAr)}
                 </h2>
@@ -223,7 +223,7 @@ function MenuRow({
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <li className={`menu-reveal flex break-inside-avoid items-start gap-2 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}>
+    <li className={`reveal flex break-inside-avoid items-start gap-2 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}>
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${d.menu.details}`}

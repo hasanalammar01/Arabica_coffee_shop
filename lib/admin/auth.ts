@@ -10,6 +10,9 @@ import { getSettings } from "@/lib/db";
  */
 export const COOKIE = "arabica_admin";
 const MAX_AGE = 60 * 60 * 12; // 12 hours
+/** Wrong passwords allowed per connection per 15 minutes (sign-in and password change). */
+export const LOGIN_TRIES = 5;
+export const MIN_PASSWORD = 10;
 
 async function login() {
   const s = await getSettings();

@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildMenu } from "./menu-core.ts";
-import { DEFAULT_SETTINGS, menuItems, orderMessage, priceLine, summarize, validateOrder } from "./orders-core.ts";
+import {
+  cleanShopSettings,
+  DEFAULT_SETTINGS,
+  menuItems,
+  orderMessage,
+  paymentReady,
+  priceLine,
+  summarize,
+  validateOrder,
+} from "./orders-core.ts";
 
 const menu = buildMenu([
   {
@@ -86,6 +95,32 @@ test("orders are refused when off, closed, incomplete or tampered with", () => {
   assert.equal(check({ ...body, lines: [] }), "invalid");
   assert.equal(check({ ...body, website: "spam" }), "invalid");
   assert.equal(check({ ...body, lines: [{ ...latte, size: "Huge" }] }), "unavailable");
+});
+
+test("payment methods: each kind needs its own details before customers see it", () => {
+  const [cash, whish, card] = DEFAULT_SETTINGS.payments;
+  assert.equal(paymentReady(cash), true);
+  assert.equal(paymentReady({ ...whish, enabled: true }), false); // no number yet
+  assert.equal(paymentReady({ ...whish, enabled: true, phone: "03 123 456", accountName: "Rana" }), true);
+  assert.equal(paymentReady({ ...card, enabled: true, cards: "Visa" }), true);
+  assert.equal(paymentReady({ ...cash, enabled: false }), false);
+
+  // An enabled Whish with no number can't be chosen, even by a tampered request.
+  const incomplete = { ...settings, payments: [cash, { ...whish, enabled: true }] };
+  const r = validateOrder({ ...body, payment: "whish" }, { menu, settings: incomplete, open: true });
+  assert.deepEqual(r, { error: "invalid" });
+});
+
+test("saved methods get a kind; unknown fields (like a CVV) are never kept", () => {
+  const [old, custom] = cleanShopSettings({
+    payments: [
+      { id: "whish", name: "Whish", enabled: true, details: "Send to 03 123 456" }, // saved before kinds
+      { id: "x1", kind: "card", name: "Card", cards: "Visa", cvv: "123", number: "4111111111111111" },
+    ],
+  }).payments;
+  assert.equal(old.kind, "whish");
+  assert.equal(custom.kind, "card");
+  assert.ok(!("cvv" in custom) && !("number" in custom));
 });
 
 test("the notification lists items, customer and payment", () => {

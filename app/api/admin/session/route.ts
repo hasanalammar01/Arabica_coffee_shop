@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE, credentialsMatch, isSignedIn, passwordSet, sameOrigin, sessionCookie } from "@/lib/admin/auth";
+import {
+  COOKIE,
+  credentialsMatch,
+  isSignedIn,
+  LOGIN_TRIES,
+  passwordSet,
+  sameOrigin,
+  sessionCookie,
+} from "@/lib/admin/auth";
 import { mode } from "@/lib/admin/store";
-import { dbConfigured } from "@/lib/db";
+import { clearHits, clientKey, dbConfigured, limited, recordHit } from "@/lib/db";
 
 /** Is this browser signed in to the admin, and where will changes be saved? */
 export async function GET(req: NextRequest) {
@@ -18,12 +26,17 @@ export async function POST(req: NextRequest) {
     return new NextResponse("The admin password isn't set up yet. Add ADMIN_PASSWORD in Vercel (see README).", {
       status: 503,
     });
+  // 5 wrong tries from one connection lock sign-in there for 15 minutes.
+  const key = clientKey(req.headers, "login");
+  if (await limited(key, LOGIN_TRIES, 15))
+    return new NextResponse("Too many wrong passwords. Wait 15 minutes, then try again.", { status: 429 });
   const { username, password } = (await req.json().catch(() => ({}))) as { username?: unknown; password?: unknown };
   if (typeof username !== "string" || typeof password !== "string" || !(await credentialsMatch(username, password))) {
-    // Slows down guessing. ponytail: per-request delay only; add a rate limiter (e.g. a table of attempts) if abused.
+    await recordHit(key);
     await new Promise((r) => setTimeout(r, 1000));
     return new NextResponse("Wrong username or password. Try again.", { status: 401 });
   }
+  await clearHits(key);
   const res = new NextResponse(null, { status: 204 });
   res.cookies.set(await sessionCookie());
   return res;

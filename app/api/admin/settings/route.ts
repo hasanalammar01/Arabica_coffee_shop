@@ -1,6 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { credentialsMatch, hashPassword, isSignedIn, sameOrigin, sessionCookie } from "@/lib/admin/auth";
-import { dbConfigured, getSettings, saveSettings } from "@/lib/db";
+import {
+  credentialsMatch,
+  hashPassword,
+  isSignedIn,
+  LOGIN_TRIES,
+  MIN_PASSWORD,
+  sameOrigin,
+  sessionCookie,
+} from "@/lib/admin/auth";
+import { clientKey, dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
 import { sendEmail, sendWhatsApp } from "@/lib/notify";
 import { cleanShopSettings } from "@/lib/orders-core";
 
@@ -58,14 +66,20 @@ export async function POST(req: NextRequest) {
 
   if (body.action === "account") {
     const { currentPassword, username, newPassword } = body;
+    // Shares the sign-in limit, so a stolen session can't be used to guess the password.
+    const key = clientKey(req.headers, "login");
+    if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong passwords. Wait 15 minutes, then try again.", 429);
     if (typeof currentPassword !== "string" || !(await credentialsMatch(settings.username, currentPassword))) {
+      await recordHit(key);
       await new Promise((r) => setTimeout(r, 1000));
       return text("The current password is wrong.", 401);
     }
     if (typeof username !== "string" || !USERNAME.test(username.trim()))
       return text("The username needs 3 to 40 letters, numbers, dots, dashes or underscores.", 400);
-    if (typeof newPassword !== "string" || (newPassword && newPassword.length < 8))
-      return text("The new password needs at least 8 characters.", 400);
+    if (typeof newPassword !== "string" || (newPassword && newPassword.length < MIN_PASSWORD))
+      return text(`The new password needs at least ${MIN_PASSWORD} characters.`, 400);
+    if (newPassword && newPassword.toLowerCase().includes(username.trim().toLowerCase()))
+      return text("The password can't contain the username.", 400);
     await saveSettings({
       username: username.trim(),
       ...(newPassword && { passwordHash: hashPassword(newPassword) }),

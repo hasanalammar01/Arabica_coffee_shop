@@ -51,13 +51,13 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
             <div className="mt-8 flex animate-rise flex-wrap gap-3 [animation-delay:240ms]">
               <Link
                 href={href(lang, "/menu")}
-                className="inline-flex min-h-12 items-center rounded-full bg-crema px-6 font-medium text-ink transition-colors hover:bg-on-espresso"
+                className="lift inline-flex min-h-12 items-center rounded-full bg-crema px-6 font-medium text-espresso hover:bg-on-espresso"
               >
                 {d.home.viewMenu}
               </Link>
               <Link
                 href={href(lang, "/contact")}
-                className="inline-flex min-h-12 items-center rounded-full border border-on-espresso/40 px-6 font-medium transition-colors hover:border-on-espresso"
+                className="lift inline-flex min-h-12 items-center rounded-full border border-on-espresso/40 px-6 font-medium hover:border-on-espresso hover:bg-on-espresso/10"
               >
                 {d.home.findUs}
               </Link>
@@ -87,7 +87,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
 
       {signature.length > 0 && (
         <section aria-labelledby="signature" className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
-          <h2 id="signature" className="font-display text-title">
+          <h2 id="signature" className="reveal font-display text-title">
             {d.home.signature}
           </h2>
           <ItemInfoGroup>
@@ -98,7 +98,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
                 ) : (
                   <div
                     key={i.id}
-                    className="flex flex-col justify-end rounded-card border border-line bg-surface p-5"
+                    className="reveal flex flex-col justify-end rounded-card border border-line bg-surface p-5"
                   >
                     <h3 className="text-[1.0625rem] font-medium">{pick(lang, i.name, i.nameAr)}</h3>
                     <Price prices={i.prices} sizesAr={i.sizesAr} lang={lang} className="mt-1 text-muted" />
@@ -111,12 +111,12 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
       )}
 
       <section aria-labelledby="on-the-menu" className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
-        <h2 id="on-the-menu" className="font-display text-title">
+        <h2 id="on-the-menu" className="reveal font-display text-title">
           {d.home.onTheMenu}
         </h2>
         <ul className="mt-8 border-t-2 border-ink">
           {menu.map((c) => (
-            <li key={c.id} className="border-b border-line">
+            <li key={c.id} className="reveal border-b border-line">
               <Link
                 href={`${href(lang, "/menu")}#${c.id}`}
                 className="group flex min-h-16 items-center gap-4 py-4 transition-colors hover:text-caramel"
@@ -137,8 +137,8 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
 
       {story.length > 0 && (
         <section className="mx-auto grid max-w-6xl gap-6 px-4 pt-24 sm:px-6 md:grid-cols-[1fr_1.4fr] md:gap-16">
-          <h2 className="font-display text-title">{pick(lang, site.story.title, site.story.titleAr)}</h2>
-          <div className="space-y-4 text-lg text-muted">
+          <h2 className="reveal font-display text-title">{pick(lang, site.story.title, site.story.titleAr)}</h2>
+          <div className="reveal space-y-4 text-lg text-muted">
             {story.map((p) => (
               <p key={p}>{p}</p>
             ))}

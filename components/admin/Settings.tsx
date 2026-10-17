@@ -8,7 +8,14 @@ import {
   testNotification,
   type SettingsData,
 } from "@/lib/admin/backend";
-import type { PaymentMethod, ShopSettings } from "@/lib/orders-core";
+import {
+  PAYMENT_KINDS,
+  paymentReady,
+  REQUIRED_FIELDS,
+  type PaymentKind,
+  type PaymentMethod,
+  type ShopSettings,
+} from "@/lib/orders-core";
 import { Button, ErrorBanner, Field, Icon, PageHeader, Toggle } from "./ui";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -88,74 +95,161 @@ function SettingRow({ title, children, toggle }: { title: string; children: Reac
 
 /* ---------- Payment methods ---------- */
 
+const KIND_LABEL: Record<PaymentKind, string> = {
+  cash: "Cash on delivery",
+  whish: "Whish Money",
+  card: "Card on delivery",
+  bank: "Bank transfer",
+  other: "Other",
+};
+const KIND_NAME_AR: Record<PaymentKind, string> = {
+  cash: "الدفع نقداً عند الاستلام",
+  whish: "ويش موني",
+  card: "بطاقة عند الاستلام",
+  bank: "تحويل مصرفي",
+  other: "",
+};
+const KIND_HINT: Record<PaymentKind, string> = {
+  cash: "Customers pay in cash when they receive the order. Nothing else to fill in.",
+  whish: "Customers send the total to this Whish number, then you check it arrived.",
+  card: "The driver (or the counter) takes the card on a card machine. Never type card numbers or CVVs here.",
+  bank: "Customers transfer the total to this account. Only receiving details: never share passwords or card numbers.",
+  other: "For anything else (OMT, a wallet…). Write exactly what customers should do.",
+};
+const FIELD_LABEL: Partial<Record<keyof PaymentMethod, string>> = {
+  phone: "Whish phone number",
+  accountName: "Account name",
+  cards: "Accepted cards",
+  bank: "Bank name",
+  iban: "IBAN or account number",
+  details: "Instructions",
+};
+const PLACEHOLDER: Partial<Record<keyof PaymentMethod, string>> = {
+  phone: "e.g. 03 123 456",
+  accountName: "Name on the account",
+  cards: "e.g. Visa, Mastercard",
+  bank: "e.g. Bank Audi",
+  iban: "e.g. LB62 0999 0000 0001 0019 0122 9114",
+  details: "e.g. Send the total by OMT to …",
+};
+
+const blankMethod = (): PaymentMethod => ({
+  id: crypto.randomUUID().slice(0, 8),
+  kind: "other",
+  name: "",
+  nameAr: "",
+  enabled: true,
+  phone: "",
+  accountName: "",
+  cards: "",
+  bank: "",
+  iban: "",
+  details: "",
+  detailsAr: "",
+});
+
 export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) => void; onSaved: (m: string) => void }) {
   const s = useShopSettings(setDirty, onSaved);
   const methods = s.shop?.payments ?? [];
   const edit = (index: number, patch: Partial<PaymentMethod>) =>
     s.update({ payments: methods.map((m, i) => (i === index ? { ...m, ...patch } : m)) });
 
+  // Switching the type renames a method that still has the old type's default name.
+  const changeKind = (index: number, kind: PaymentKind) => {
+    const m = methods[index];
+    const defaultName = !m.name || m.name === KIND_LABEL[m.kind];
+    edit(index, {
+      kind,
+      ...(defaultName && { name: kind === "other" ? "" : KIND_LABEL[kind], nameAr: KIND_NAME_AR[kind] }),
+    });
+  };
+
   return (
     <div className="page narrow-page">
       <PageHeader
         eyebrow="Online orders"
         title="Payment methods"
-        description="Choose how customers can pay, and what they need to know for each method."
+        description="Choose how customers can pay, and fill in the details each method needs."
       />
       {s.error && <ErrorBanner message={s.error} onClose={() => s.setError("")} />}
       {!s.shop && !s.error && <p className="muted-text">Loading…</p>}
       {s.shop && (
         <>
-          {!methods.some((m) => m.enabled) && (
-            <div className="info-banner">Turn on at least one method, or customers can&apos;t place orders.</div>
+          {!methods.some(paymentReady) && (
+            <div className="info-banner">Turn on at least one complete method, or customers can&apos;t place orders.</div>
           )}
-          {methods.map((m, i) => (
-            <section key={m.id} className="form-section payment-method">
-              <SettingRow
-                title={m.name || "New payment method"}
-                toggle={<Toggle checked={m.enabled} onChange={(enabled) => edit(i, { enabled })} label={`Offer ${m.name}`} />}
-              >
-                {m.enabled ? "Customers can choose this when ordering." : "Hidden from customers."}
-              </SettingRow>
-              <div className="form-grid">
-                <Field label="Name" required>
-                  <input value={m.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder="e.g. Whish Money" />
+          {methods.map((m, i) => {
+            const missing = REQUIRED_FIELDS[m.kind].filter((f) => !String(m[f]).trim());
+            return (
+              <section key={m.id} className="form-section payment-method">
+                <SettingRow
+                  title={m.name || "New payment method"}
+                  toggle={<Toggle checked={m.enabled} onChange={(enabled) => edit(i, { enabled })} label={`Offer ${m.name}`} />}
+                >
+                  {!m.enabled
+                    ? "Hidden from customers."
+                    : missing.length
+                      ? `Hidden from customers until you fill in: ${missing.map((f) => FIELD_LABEL[f]).join(", ")}.`
+                      : "Customers can choose this when ordering."}
+                </SettingRow>
+                <Field label="Type" hint={KIND_HINT[m.kind]}>
+                  <select value={m.kind} onChange={(e) => changeKind(i, e.target.value as PaymentKind)}>
+                    {PAYMENT_KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {KIND_LABEL[k]}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-                <Field label="Name in Arabic">
-                  <input dir="rtl" value={m.nameAr} onChange={(e) => edit(i, { nameAr: e.target.value })} />
+                <div className="form-grid">
+                  <Field label="Name customers see" required>
+                    <input value={m.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder="e.g. Whish Money" />
+                  </Field>
+                  <Field label="Name in Arabic">
+                    <input dir="rtl" value={m.nameAr} onChange={(e) => edit(i, { nameAr: e.target.value })} />
+                  </Field>
+                  {REQUIRED_FIELDS[m.kind]
+                    .filter((f) => f !== "details")
+                    .map((f) => (
+                      <Field key={f} label={FIELD_LABEL[f]!} required>
+                        <input
+                          value={String(m[f])}
+                          onChange={(e) => edit(i, { [f]: e.target.value })}
+                          placeholder={PLACEHOLDER[f]}
+                          dir={f === "phone" || f === "iban" ? "ltr" : undefined}
+                          inputMode={f === "phone" ? "tel" : undefined}
+                          autoComplete="off"
+                          className={m.enabled && missing.includes(f) ? "error" : ""}
+                        />
+                      </Field>
+                    ))}
+                </div>
+                <Field
+                  label={m.kind === "other" ? "Instructions for customers" : "Extra note (optional)"}
+                  required={m.kind === "other"}
+                  hint={m.kind === "other" ? undefined : "e.g. Send a screenshot of the transfer on WhatsApp."}
+                >
+                  <textarea
+                    rows={2}
+                    value={m.details}
+                    onChange={(e) => edit(i, { details: e.target.value })}
+                    placeholder={m.kind === "other" ? PLACEHOLDER.details : undefined}
+                  />
                 </Field>
-              </div>
-              <Field label="Instructions for customers" hint="Shown when they pick this method, e.g. the Whish number to send to.">
-                <textarea
-                  rows={2}
-                  value={m.details}
-                  onChange={(e) => edit(i, { details: e.target.value })}
-                  placeholder="e.g. Send the total to Whish 03 123 456 and add your name."
-                />
-              </Field>
-              <Field label="Instructions in Arabic">
-                <textarea rows={2} dir="rtl" value={m.detailsAr} onChange={(e) => edit(i, { detailsAr: e.target.value })} />
-              </Field>
-              <button
-                type="button"
-                className="delete-item-button"
-                onClick={() => s.update({ payments: methods.filter((_, j) => j !== i) })}
-              >
-                <Icon name="trash" /> Remove this method
-              </button>
-            </section>
-          ))}
-          <button
-            type="button"
-            className="add-row"
-            onClick={() =>
-              s.update({
-                payments: [
-                  ...methods,
-                  { id: crypto.randomUUID().slice(0, 8), name: "", nameAr: "", details: "", detailsAr: "", enabled: true },
-                ],
-              })
-            }
-          >
+                <Field label={m.kind === "other" ? "Instructions in Arabic" : "Extra note in Arabic"}>
+                  <textarea rows={2} dir="rtl" value={m.detailsAr} onChange={(e) => edit(i, { detailsAr: e.target.value })} />
+                </Field>
+                <button
+                  type="button"
+                  className="delete-item-button"
+                  onClick={() => s.update({ payments: methods.filter((_, j) => j !== i) })}
+                >
+                  <Icon name="trash" /> Remove this method
+                </button>
+              </section>
+            );
+          })}
+          <button type="button" className="add-row" onClick={() => s.update({ payments: [...methods, blankMethod()] })}>
             <Icon name="plus" /> Add a payment method
           </button>
           <SaveBar busy={s.busy} dirty={s.dirty} onSave={s.save} onDiscard={s.discard} />
@@ -351,7 +445,7 @@ function AccountSection({ data, onSaved }: { data: SettingsData; onSaved: (m: st
             autoComplete="current-password"
           />
         </Field>
-        <Field label="New password" hint="At least 8 characters. Leave empty to keep the current one.">
+        <Field label="New password" hint="At least 10 characters, not containing the username. Leave empty to keep the current one.">
           <input type="password" value={newPassword} onChange={(e) => setNew(e.target.value)} autoComplete="new-password" />
         </Field>
         <Field label="Repeat new password">
