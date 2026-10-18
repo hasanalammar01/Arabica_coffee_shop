@@ -3,13 +3,15 @@ import {
   credentialsMatch,
   hashPassword,
   isSignedIn,
-  LOGIN_TRIES,
+  attemptFailed,
+  attemptsBlocked,
   MIN_PASSWORD,
   pinMatches,
   sameOrigin,
   sessionCookie,
+  signOutEverywhere,
 } from "@/lib/admin/auth";
-import { clientKey, dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
+import { dbConfigured, getSettings, saveSettings } from "@/lib/db";
 import { pinProblem } from "@/lib/admin/pin";
 import { readJson } from "@/lib/http";
 import { sendEmail, sendWhatsApp } from "@/lib/notify";
@@ -58,11 +60,11 @@ export async function PUT(req: NextRequest) {
   const current = await getSettings();
   const numberChanged = shop.whatsapp.phone !== current.whatsapp.phone || shop.whatsapp.apiKey !== current.whatsapp.apiKey;
   if (current.pinHash && numberChanged) {
-    const key = clientKey(req.headers, "login");
-    if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong attempts. Wait 15 minutes, then try again.", 429);
+    const blocked = await attemptsBlocked(req);
+    if (blocked) return text(blocked, 429);
     const pin = (body as { currentPin?: unknown }).currentPin;
     if (typeof pin !== "string" || !(await pinMatches(pin))) {
-      await recordHit(key);
+      await attemptFailed(req, "settings-pin");
       return text("Enter your PIN to change the WhatsApp number or key.", 401);
     }
   }
@@ -95,15 +97,22 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
+  // Ends every session (a lost phone, a shared computer); this browser gets a fresh one.
+  if (body.action === "signout-all") {
+    await signOutEverywhere();
+    const res = new NextResponse(null, { status: 204 });
+    res.cookies.set(await sessionCookie());
+    return res;
+  }
+
   if (body.action !== "account" && body.action !== "pin") return text("Unknown action.", 400);
 
   // Both need the current password, and the current PIN once one exists. This shares the
   // sign-in limit, so a stolen session can't be used to guess either.
-  const key = clientKey(req.headers, "login");
-  if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong attempts. Wait 15 minutes, then try again.", 429);
+  const blocked = await attemptsBlocked(req);
+  if (blocked) return text(blocked, 429);
   const refuse = async (message: string) => {
-    await recordHit(key);
-    await new Promise((r) => setTimeout(r, 1000));
+    await attemptFailed(req, `settings-${body.action}`);
     return text(message, 401);
   };
   if (typeof body.currentPassword !== "string" || !(await credentialsMatch(settings.username, body.currentPassword)))

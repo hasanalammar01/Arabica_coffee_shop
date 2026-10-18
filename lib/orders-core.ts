@@ -67,6 +67,8 @@ export type Settings = ShopSettings & {
   pinHash: string;
   /** A pending "forgot PIN" code: "<hash>|<expires ms>", or "". */
   pinReset: string;
+  /** Raised by "Sign out all devices": part of the session secret, so old sessions stop working. */
+  sessionEpoch: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   passwordHash: "",
   pinHash: "",
   pinReset: "",
+  sessionEpoch: 0,
   ordersEnabled: false,
   payments: [
     { id: "cash", kind: "cash", name: "Cash on delivery", nameAr: "الدفع نقداً عند الاستلام", enabled: true },
@@ -131,6 +134,7 @@ export const withDefaults = (stored: unknown): Settings => {
     passwordHash: str(s.passwordHash, 300),
     pinHash: str(s.pinHash, 300),
     pinReset: str(s.pinReset, 300),
+    sessionEpoch: Number.isInteger(s.sessionEpoch) ? (s.sessionEpoch as number) : 0,
     ...cleanShopSettings({ ...DEFAULT_SETTINGS, ...s }),
   };
 };
@@ -275,12 +279,14 @@ export const lineLabel = (l: OrderLine) =>
 
 /** The WhatsApp/email message for a new order. */
 export function orderMessage(o: Pick<Order, "id" | "name" | "phone" | "fulfilment" | "address" | "location" | "note" | "payment" | "items" | "total">) {
+  // Customer text stays on one line, so a note can't fake extra lines like "Payment: PAID".
+  const line = (text: string) => text.replace(/\s+/g, " ").trim();
   const items = [`New order #${o.id}: ${amount(o.total)}`, ...o.items.map((l) => `${l.qty}× ${lineLabel(l)}`)];
   const customer = [
-    `${o.name} · ${o.phone}`,
-    o.fulfilment === "pickup" ? "Pickup at the café" : `Delivery: ${o.address}`,
+    `${line(o.name)} · ${line(o.phone)}`,
+    o.fulfilment === "pickup" ? "Pickup at the café" : `Delivery: ${line(o.address)}`,
     o.location && `Map: ${o.location}`,
-    o.note && `Note: ${o.note}`,
+    o.note && `Note: ${line(o.note)}`,
     `Payment: ${o.payment}`,
   ].filter(Boolean);
   return `${items.join("\n")}\n\n${customer.join("\n")}`;

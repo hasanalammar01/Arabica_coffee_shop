@@ -6,6 +6,7 @@ import {
   saveAccount,
   savePin,
   saveShopSettings,
+  signOutAllDevices,
   testNotification,
   type SettingsData,
 } from "@/lib/admin/backend";
@@ -414,6 +415,7 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
           </section>
 
           <AccountSection data={s.data} pinSet={pinSet} onSaved={onSaved} />
+          <DevicesSection onSaved={onSaved} />
           <PinSection
             pinSet={pinSet}
             onSaved={(m) => {
@@ -526,6 +528,43 @@ function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet:
         {busy ? "Updating…" : "Update login"}
       </button>
     </form>
+  );
+}
+
+/** "Sign out all devices": for a lost phone or a shared computer. */
+function DevicesSection({ onSaved }: { onSaved: (m: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <section className="form-section">
+      <div className="section-title">
+        <h2>Signed-in devices</h2>
+        <p>Lost a phone, or signed in on someone else&apos;s computer? Sign out everywhere; this device stays signed in.</p>
+      </div>
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
+      <Button
+        variant="secondary"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            await signOutAllDevices();
+            onSaved("Every other device is signed out.");
+          } catch (e) {
+            setError(errorText(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Signing out…" : "Sign out all other devices"}
+      </Button>
+    </section>
   );
 }
 

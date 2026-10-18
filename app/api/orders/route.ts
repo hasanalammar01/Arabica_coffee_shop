@@ -44,7 +44,16 @@ export async function POST(req: Request) {
 
   const order = await addOrder(result.order);
   await recordHit(key);
-  // Notify after answering so the customer isn't kept waiting on WhatsApp/email.
-  after(() => notifyAdmin(settings, `New order #${order.id}`, orderMessage(order)));
+  // Notify after answering so the customer isn't kept waiting on WhatsApp/email. Capped at 60 an
+  // hour, so a flood of fake orders can't spam the admin's phone or get the WhatsApp key blocked;
+  // capped orders are still saved and show in the admin.
+  after(async () => {
+    if (await limited("notify:order", 60, 60)) {
+      console.warn(JSON.stringify({ event: "order_notification_capped", order: order.id }));
+      return;
+    }
+    await recordHit("notify:order");
+    await notifyAdmin(settings, `New order #${order.id}`, orderMessage(order));
+  });
   return NextResponse.json({ id: order.id, total: order.total }, noStore);
 }

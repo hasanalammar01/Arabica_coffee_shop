@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSignedIn, sameOrigin } from "@/lib/admin/auth";
 import { ALLOWED, mode, publish, readText, StoreError } from "@/lib/admin/store";
+import { publishProblem } from "@/lib/admin/publish-check";
 import { readJson } from "@/lib/http";
 
 const text = (message: string, status: number) => new NextResponse(message, { status });
@@ -50,6 +51,10 @@ export async function POST(req: NextRequest) {
         f.content.length <= MAX_FILE,
     );
   if (!valid) return text("That change can't be published.", 400);
+  for (const f of files as { path: string; content: string }[]) {
+    const problem = publishProblem(f.path, f.content);
+    if (problem) return text(problem, 400);
+  }
 
   const base = Object.fromEntries(
     Object.entries(body?.base ?? {}).filter((e): e is [string, string] => typeof e[1] === "string"),

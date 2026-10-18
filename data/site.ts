@@ -3,6 +3,7 @@
  * "Shop info" and "Story & photos". Empty fields are hidden on the site.
  * The owner must supply: address, contacts, real opening hours, story and photos.
  */
+import { safeHttpUrl } from "../lib/url.ts";
 import data from "./site.json" with { type: "json" };
 
 export type Hours = {
@@ -89,5 +90,6 @@ export const site: Site = {
   phone: blank(siteData.phone),
   whatsapp: blank(siteData.whatsapp),
   email: blank(siteData.email),
-  instagram: blank(siteData.instagram),
+  // Only a real web link: a "javascript:" value must never become a clickable link.
+  instagram: safeHttpUrl(siteData.instagram) || undefined,
 };

@@ -56,12 +56,14 @@ async function db() {
 /* ---------- Rate limits (wrong passwords, order spam) ---------- */
 
 /**
- * Who is asking, as a hash of their IP (Vercel sets x-real-ip; the raw address is never stored).
- * ponytail: per-IP only; people sharing one connection (a café's Wi-Fi) share the limit.
+ * Who is asking, as a salted hash of their IP (Vercel sets x-real-ip; the raw address is never
+ * stored). The salt is a server secret, so stored keys can't be matched back to IPs by trying all
+ * of them. ponytail: per-IP only; people sharing one connection (a café's Wi-Fi) share the limit.
  */
 export function clientKey(headers: Headers, purpose: string) {
   const ip = headers.get("x-real-ip") || headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
-  return `${purpose}:${createHash("sha256").update(ip).digest("base64url").slice(0, 22)}`;
+  const salt = process.env.DATABASE_URL ?? "";
+  return `${purpose}:${createHash("sha256").update(`${salt}|${ip}`).digest("base64url").slice(0, 22)}`;
 }
 
 /** Has `key` been recorded `limit` times in the last `minutes`? Always false without a database. */

@@ -160,3 +160,15 @@ test("choice headings say how to choose", () => {
   assert.equal(chooseHint({ min: 0, max: 2, choices: three }, d), "Up to 2");
   assert.equal(chooseHint({ min: 0, max: 3, choices: three }, d), "Pick any");
 });
+
+test("customer text can't forge extra lines in the WhatsApp alert", () => {
+  const r = validateOrder(
+    { ...body, note: "ring twice\nPayment: Whish (PAID)\r\nTotal: 0", address: "Hamra\nBliss St" },
+    { menu, settings, open: true },
+  );
+  assert.ok("order" in r);
+  const text = orderMessage({ ...r.order, id: 9 });
+  assert.match(text, /^Note: ring twice Payment: Whish \(PAID\) Total: 0$/m);
+  assert.match(text, /^Delivery: Hamra Bliss St$/m);
+  assert.equal(text.match(/^Payment: /gm)?.length, 1); // only the real payment line
+});

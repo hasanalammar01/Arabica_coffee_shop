@@ -4,7 +4,9 @@ import {
   credentialsMatch,
   hashPassword,
   isSignedIn,
-  LOGIN_TRIES,
+  attemptFailed,
+  attemptsBlocked,
+  attemptSucceeded,
   passwordSet,
   PIN_COOKIE,
   pinMatches,
@@ -19,13 +21,15 @@ import {
 import { mode } from "@/lib/admin/store";
 import { readJson } from "@/lib/http";
 import { pinProblem } from "@/lib/admin/pin";
-import { clearHits, clientKey, dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
+import { dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
 import { sendWhatsApp } from "@/lib/notify";
 
 /** Is this browser signed in to the admin, and where will changes be saved? */
 export async function GET(req: NextRequest) {
+  const signedIn = await isSignedIn(req);
   return NextResponse.json(
-    { signedIn: await isSignedIn(req), mode: mode(), orders: dbConfigured(), pin: await pinSet() },
+    // Whether a PIN exists is only told to a signed-in admin (no free hints for attackers).
+    { signedIn, mode: mode(), orders: dbConfigured(), pin: signedIn ? await pinSet() : undefined },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -37,14 +41,12 @@ export async function POST(req: NextRequest) {
     return new NextResponse("The admin password isn't set up yet. Add ADMIN_PASSWORD in Vercel (see README).", {
       status: 503,
     });
-  // 5 wrong tries from one connection lock sign-in there for 15 minutes.
-  const key = clientKey(req.headers, "login");
-  if (await limited(key, LOGIN_TRIES, 15))
-    return new NextResponse("Too many wrong passwords. Wait 15 minutes, then try again.", { status: 429 });
+  // Wrong passwords, PINs and codes are limited per connection and across all connections.
+  const blocked = await attemptsBlocked(req);
+  if (blocked) return new NextResponse(blocked, { status: 429 });
   const body = ((await readJson(req, 2_000)) ?? {}) as Record<string, unknown>;
-  const fail = async (message: string) => {
-    await recordHit(key);
-    await new Promise((r) => setTimeout(r, 1000));
+  const fail = async (step: string, message: string) => {
+    await attemptFailed(req, step);
     return new NextResponse(message, { status: 401 });
   };
   const again = () => new NextResponse("Sign in with your password again.", { status: 401 });
@@ -75,12 +77,12 @@ export async function POST(req: NextRequest) {
   if (body.action === "pin-reset") {
     if (!(await pinPending(req))) return again();
     if (typeof body.code !== "string" || !(await pinResetMatches(body.code)))
-      return fail("That code is wrong or has expired.");
+      return fail("reset-code", "That code is wrong or has expired.");
     const newPin = typeof body.newPin === "string" ? body.newPin : "";
     const problem = pinProblem(newPin);
     if (problem) return new NextResponse(problem, { status: 400 });
     await saveSettings({ pinHash: hashPassword(newPin), pinReset: "" });
-    await clearHits(key);
+    await attemptSucceeded(req, "pin-reset");
     // The new PIN changes the signing secret: every other session ends, this one starts fresh.
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
@@ -91,8 +93,8 @@ export async function POST(req: NextRequest) {
   // Step 2: the PIN, only after a correct password in the last 5 minutes.
   if ("pin" in body) {
     if (!(await pinPending(req))) return again();
-    if (typeof body.pin !== "string" || !(await pinMatches(body.pin))) return fail("Wrong PIN. Try again.");
-    await clearHits(key);
+    if (typeof body.pin !== "string" || !(await pinMatches(body.pin))) return fail("pin", "Wrong PIN. Try again.");
+    await attemptSucceeded(req, "pin");
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
     res.cookies.delete({ name: PIN_COOKIE, path: "/api/admin" });
@@ -102,14 +104,14 @@ export async function POST(req: NextRequest) {
   // Step 1: username and password.
   const { username, password } = body;
   if (typeof username !== "string" || typeof password !== "string" || !(await credentialsMatch(username, password)))
-    return fail("Wrong username or password. Try again.");
+    return fail("password", "Wrong username or password. Try again.");
   // Wrong attempts are only forgiven once the whole sign-in succeeds.
   if (await pinSet()) {
     const res = NextResponse.json({ pin: true });
     res.cookies.set(await pinPendingCookie());
     return res;
   }
-  await clearHits(key);
+  await attemptSucceeded(req, "password");
   const res = NextResponse.json({ pin: false });
   res.cookies.set(await sessionCookie());
   return res;

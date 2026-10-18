@@ -95,6 +95,9 @@ export const saveAccount = (account: { currentPassword: string; currentPin: stri
   api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "account", ...account }) });
 export const savePin = (change: { currentPassword: string; currentPin: string; newPin: string }) =>
   api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "pin", ...change }) });
+/** Ends every admin session; this browser stays signed in with a fresh one. */
+export const signOutAllDevices = () =>
+  api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "signout-all" }) });
 export const testNotification = (channel: "whatsapp" | "email") =>
   api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "test", channel }) });
 
