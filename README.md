@@ -45,6 +45,12 @@ Staff sign in with a username and password (username `admin` and `ADMIN_PASSWORD
 
 The repository and branch are set in `lib/admin/store.ts` (`REPO`, `BRANCH`).
 
+### Staff accounts
+
+The super admin (the login above, with the PIN) creates staff accounts in **Settings → Staff accounts**: a username, a password (10+ characters) and the pages they can open. New accounts get Menu items, Sections, Shop info and Orders; Statistics, Payment methods and Settings are off until ticked. Staff sign in on the same `/admin` page (no PIN step) and every staff member can change their own password under Settings. Staff can never manage staff accounts or change the super admin's login, PIN or the WhatsApp number, even with Settings access. The server enforces all of this on every request (`lib/admin/permissions.ts`, `lib/admin/guard.ts`); changing, disabling or deleting an account signs that person out, and menu commits record who published them.
+
+Accounts live in the `staff` table (passwords hashed with scrypt), never in this repository.
+
 ### Sign-in PIN
 
 Once a 4-digit PIN is created in **Settings → Sign-in PIN**, signing in takes the password and then the PIN. Changing the login, the PIN or the WhatsApp number needs the PIN too, and wrong PINs count towards the same lockout as wrong passwords (5 tries, then 15 minutes).

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isSignedIn, sameOrigin } from "@/lib/admin/auth";
+import { guard } from "@/lib/admin/guard";
+import { canPublish } from "@/lib/admin/permissions";
 import { ALLOWED, mode, publish, readText, StoreError } from "@/lib/admin/store";
 import { publishProblem } from "@/lib/admin/publish-check";
 import { readJson } from "@/lib/http";
@@ -13,9 +14,13 @@ const MAX_FILE = 3_000_000; // base64 characters, about 2 MB
 const fail = (e: unknown) =>
   e instanceof StoreError ? text(e.message, e.status) : text("Something went wrong. Try again.", 500);
 
-/** Read data/menu.json or data/site.json (latest version, not the deployed copy). */
+/**
+ * Read data/menu.json or data/site.json (latest version, not the deployed copy). Any signed-in
+ * user: the admin needs both to start, and both files are public on the website anyway.
+ */
 export async function GET(req: NextRequest) {
-  if (!(await isSignedIn(req))) return text("Your session ended. Sign in again.", 401);
+  const g = await guard(req);
+  if ("refuse" in g) return g.refuse;
   if (!mode()) return text(NOT_SET_UP, 503);
   const path = req.nextUrl.searchParams.get("path") ?? "";
   if (!ALLOWED.test(path) || !path.endsWith(".json")) return text("That file can't be read here.", 400);
@@ -28,8 +33,8 @@ export async function GET(req: NextRequest) {
 
 /** Publish: { message, files: [{ path, content (base64) }], base: { path: version } }. */
 export async function POST(req: NextRequest) {
-  if (!sameOrigin(req)) return text("Not allowed.", 403);
-  if (!(await isSignedIn(req))) return text("Your session ended. Sign in again, then publish.", 401);
+  const g = await guard(req, { write: true });
+  if ("refuse" in g) return g.refuse;
   if (!mode()) return text(NOT_SET_UP, 503);
 
   const body = (await readJson(req, MAX_FILE * 10 + 10_000)) as {
@@ -52,6 +57,8 @@ export async function POST(req: NextRequest) {
     );
   if (!valid) return text("That change can't be published.", 400);
   for (const f of files as { path: string; content: string }[]) {
+    // Staff publish only what their pages cover: the menu (and photos), or shop info.
+    if (!canPublish(g.user, f.path)) return text("You don't have access to change this.", 403);
     const problem = publishProblem(f.path, f.content);
     if (problem) return text(problem, 400);
   }
@@ -62,7 +69,7 @@ export async function POST(req: NextRequest) {
   try {
     const versions = await publish(
       files as { path: string; content: string }[],
-      `${body!.message as string} (via menu admin)`,
+      `${body!.message as string} (via menu admin, by ${g.user.role === "admin" ? "super admin" : `staff: ${g.user.name}`})`,
       base,
     );
     return NextResponse.json({ versions });

@@ -2,6 +2,7 @@
  * The admin's link to the server (/api/admin/*). The server holds the GitHub key and
  * decides where files go (lib/admin/store.ts); the browser only ever sees the menu files.
  */
+import type { Page } from "@/lib/admin/permissions";
 import type { DayTotal, Order, OrderStatus, ShopSettings, Totals } from "@/lib/orders-core";
 
 export type FileChange = { path: string; content: string | Blob };
@@ -45,9 +46,13 @@ export const getSession = async () =>
     mode: Mode | null;
     /** The orders database is connected. */
     orders: boolean;
-    /** A sign-in PIN is set. */
-    pin: boolean;
+    /** A sign-in PIN is set (told to the super admin only). */
+    pin?: boolean;
+    /** Who is signed in and which pages they may open. */
+    user?: SessionUser;
   };
+
+export type SessionUser = { name: string; role: "admin" | "staff"; pages: Page[] };
 
 /** Step 1. `pin: true` means the PIN is needed next (step 2, within 5 minutes). */
 export const signIn = async (username: string, password: string) =>
@@ -70,15 +75,34 @@ export const verifyPin = (pin: string) => api("/api/admin/session", { method: "P
 export type OrdersOverview = {
   orders: Order[];
   newOrders: number;
-  stats: { today: Totals; week: Totals; month: Totals; all: Totals; last30: DayTotal[] };
+  /** null without access to Statistics. */
+  stats: { today: Totals; week: Totals; month: Totals; all: Totals; last30: DayTotal[] } | null;
 };
 export type SettingsData = {
-  shop: ShopSettings;
+  /** null for staff without Payment methods or Settings access. */
+  shop: ShopSettings | null;
   username: string;
-  passwordInDatabase: boolean;
-  pinSet: boolean;
+  role: "admin" | "staff";
+  /** Super admin only. */
+  passwordInDatabase?: boolean;
+  pinSet?: boolean;
   emailReady: boolean;
 };
+
+/* Staff accounts (super admin only). */
+
+export type StaffAccount = { id: number; username: string; pages: Page[]; active: boolean; createdAt: string };
+
+export const listStaff = async () => (await (await api("/api/admin/staff")).json()) as StaffAccount[];
+export const createStaff = async (account: { username: string; password: string; pages: Page[] }) =>
+  (await (await api("/api/admin/staff", { method: "POST", body: JSON.stringify(account) })).json()) as StaffAccount;
+export const updateStaff = async (change: { id: number; pages?: Page[]; active?: boolean; password?: string }) =>
+  (await (await api("/api/admin/staff", { method: "PATCH", body: JSON.stringify(change) })).json()) as StaffAccount;
+export const deleteStaff = (id: number) => api("/api/admin/staff", { method: "DELETE", body: JSON.stringify({ id }) });
+
+/** Staff: change your own password. */
+export const changeMyPassword = (currentPassword: string, newPassword: string) =>
+  api("/api/admin/settings", { method: "POST", body: JSON.stringify({ action: "my-password", currentPassword, newPassword }) });
 
 export const getOrders = async () => (await (await api("/api/admin/orders")).json()) as OrdersOverview;
 export const setOrderStatus = (id: number, status: OrderStatus) =>
@@ -103,14 +127,15 @@ export const testNotification = (channel: "whatsapp" | "email") =>
 
 export const signOut = () => api("/api/admin/session", { method: "DELETE" });
 
-export function connect(mode: Mode | null): Backend {
+export function connect(mode: Mode | null, who?: SessionUser): Backend {
   // Version of each file as loaded, so the server can refuse to overwrite someone else's publish.
   const versions = new Map<string, string>();
   const local = mode === "local";
   return {
-    user: local
-      ? { name: "Local editor", detail: "Editing files on this computer" }
-      : { name: "Arabica staff", detail: "Signed in" },
+    user: {
+      name: who?.name ?? "Local editor",
+      detail: local ? "Editing files on this computer" : who?.role === "staff" ? "Staff" : "Super admin",
+    },
     afterPublish: local
       ? "Saved to this computer. The local site updates right away."
       : "Published. The public menu updates in about a minute.",

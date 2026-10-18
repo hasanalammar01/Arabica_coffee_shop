@@ -1975,6 +1975,76 @@ html:has(.admin .mobile-header) {
     }
   }
 
+  /* Staff accounts */
+  & .page-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 14px;
+  }
+  & .page-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--white);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  & .page-checks label:has(input:checked) {
+    border-color: var(--brown);
+    background: var(--soft);
+  }
+  & .page-checks input {
+    accent-color: var(--brown);
+  }
+  & .staff-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  & .staff-row {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fcf8f2;
+  }
+  & .staff-row.disabled {
+    opacity: 0.7;
+  }
+  & .staff-row-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+  & .staff-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  & .staff-password {
+    width: 170px;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+  }
+  & .staff-add {
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  & .staff-add h3 {
+    margin: 0 0 14px;
+    font: 400 17px var(--serif);
+  }
+
   /* Sign-in PIN */
   & .pin-input {
     text-align: center;

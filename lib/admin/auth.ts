@@ -1,7 +1,20 @@
 import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
-import { clearHits, clientKey, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
-import { signToken, verifyToken } from "./token.ts";
+import {
+  clearHits,
+  clientKey,
+  dbConfigured,
+  findStaff,
+  getSettings,
+  getStaff,
+  limited,
+  recordHit,
+  saveSettings,
+  signOutAllStaff,
+  type StaffRow,
+} from "@/lib/db";
+import type { AdminUser } from "./permissions.ts";
+import { signToken, tokenUser, verifyToken } from "./token.ts";
 
 /**
  * Staff sign in to /admin with a username and password. Until the password is changed in
@@ -82,9 +95,10 @@ export async function pinResetMatches(code: string) {
   return Boolean(hash) && Number(expires) > Date.now() && /^[0-9]{6}$/.test(code) && matchesHash(code, hash);
 }
 
-/** Ends every session, including this one (the caller issues it a fresh cookie). */
+/** Ends every session, the super admin's and all staff (the caller issues itself a fresh cookie). */
 export async function signOutEverywhere() {
   await saveSettings({ sessionEpoch: (await getSettings()).sessionEpoch + 1 });
+  await signOutAllStaff();
 }
 
 /* ---------- Guessing limits, shared by every check of a password, PIN or code ---------- */
@@ -115,33 +129,69 @@ export async function attemptSucceeded(req: NextRequest, step: string) {
   console.info(JSON.stringify({ event: "admin_auth_ok", step, client: key }));
 }
 
+/* ---------- Who is signed in ---------- */
+
+/** A staff account's signing secret; "" once disabled, so none of its cookies verify. */
+const staffSecret = (s: StaffRow) => (s.active ? `staff|${s.id}|${s.passwordHash}|${s.sessionEpoch}` : "");
+
+// Hashed against when a username doesn't exist, so the response time doesn't reveal which names do.
+const DUMMY_HASH = hashPassword(randomBytes(16).toString("hex"));
+
+/** Checks a username and password: the super admin first, then the staff accounts. */
+export async function checkLogin(username: string, password: string): Promise<"admin" | StaffRow | null> {
+  if (await credentialsMatch(username, password)) return "admin";
+  if (!dbConfigured()) return null;
+  const staff = await findStaff(username);
+  const ok = matchesHash(password, staff?.passwordHash ?? DUMMY_HASH);
+  return staff && ok && staff.active ? staff : null;
+}
+
+/** Who this request's session belongs to, or null. */
+export async function currentUser(req: NextRequest): Promise<AdminUser | null> {
+  if (await openInDev()) return { role: "admin", name: "Local editor" };
+  const value = req.cookies.get(COOKIE)?.value;
+  const user = tokenUser(value);
+  if (user === "admin") {
+    const l = await login();
+    return verifyToken(l.secret, "", value) ? { role: "admin", name: l.username } : null;
+  }
+  if (user && dbConfigured()) {
+    const staff = await getStaff(Number(user.slice(1)));
+    if (staff && verifyToken(staffSecret(staff), "", value))
+      return { role: "staff", id: staff.id, name: staff.username, pages: staff.pages };
+  }
+  return null;
+}
+
+export const isSignedIn = async (req: NextRequest) => Boolean(await currentUser(req));
+
 /* ---------- Cookies ---------- */
 
-async function signedCookie(name: string, kind: "" | "pin:", maxAge: number) {
-  const { secret } = await login();
-  return {
-    name,
-    value: signToken(secret, kind, Date.now() + maxAge * 1000),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict" as const,
-    path: "/api/admin",
-    maxAge,
-  };
+const cookie = (name: string, value: string, maxAge: number) => ({
+  name,
+  value,
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: "/api/admin",
+  maxAge,
+});
+
+/** A 12-hour session for the super admin (default) or a staff account. */
+export async function sessionCookie(user: "admin" | StaffRow = "admin") {
+  const expires = Date.now() + MAX_AGE * 1000;
+  const value =
+    user === "admin"
+      ? signToken((await login()).secret, "", "admin", expires)
+      : signToken(staffSecret(user), "", `s${user.id}`, expires);
+  return cookie(COOKIE, value, MAX_AGE);
 }
 
-const validCookie = async (req: NextRequest, name: string, kind: "" | "pin:") =>
-  verifyToken((await login()).secret, kind, req.cookies.get(name)?.value);
-
-export const sessionCookie = () => signedCookie(COOKIE, "", MAX_AGE);
-/** Password was right; the PIN is still needed (5 minutes). */
-export const pinPendingCookie = () => signedCookie(PIN_COOKIE, "pin:", PIN_MAX_AGE);
-export const pinPending = (req: NextRequest) => validCookie(req, PIN_COOKIE, "pin:");
-
-export async function isSignedIn(req: NextRequest) {
-  if (await openInDev()) return true;
-  return validCookie(req, COOKIE, "");
-}
+/** Super admin only: password was right; the PIN is still needed (5 minutes). */
+export const pinPendingCookie = async () =>
+  cookie(PIN_COOKIE, signToken((await login()).secret, "pin:", "admin", Date.now() + PIN_MAX_AGE * 1000), PIN_MAX_AGE);
+export const pinPending = async (req: NextRequest) =>
+  verifyToken((await login()).secret, "pin:", req.cookies.get(PIN_COOKIE)?.value);
 
 /** Rejects requests sent from other websites (the cookie is SameSite=Strict too). */
 export const sameOrigin = (req: NextRequest) => req.headers.get("origin") === req.nextUrl.origin;

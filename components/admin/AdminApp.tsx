@@ -17,6 +17,7 @@ import {
   type FileChange,
   type Mode,
   type OrdersOverview,
+  type SessionUser,
 } from "@/lib/admin/backend";
 import {
   newKey,
@@ -28,6 +29,7 @@ import {
   type DraftSection,
 } from "@/lib/admin/draft";
 import { buildMenu, slugify } from "@/lib/menu-core";
+import { PAGES, type Page } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
 import type { OrderStatus } from "@/lib/orders-core";
 import { ItemEditor, type Destination } from "./ItemEditor";
@@ -55,7 +57,9 @@ export function AdminApp() {
   const [notice, setNotice] = useState("");
   const [dirty, setDirty] = useState(false);
   const [ordersDb, setOrdersDb] = useState(false);
-  const orders = useOrders(status === "ready" && ordersDb);
+  // The pages this user may open (all for the super admin). The server enforces the same list.
+  const [pages, setPages] = useState<Page[]>([...PAGES]);
+  const orders = useOrders(status === "ready" && ordersDb && (pages.includes("orders") || pages.includes("stats")));
 
   // Each screen opens at the top.
   useEffect(() => {
@@ -71,11 +75,15 @@ export function AdminApp() {
   }, [dirty]);
 
   /** Loads the latest menu and shop info, then shows the dashboard. */
-  const open = useCallback(async ({ mode, orders: db }: { mode: Mode | null; orders: boolean }) => {
+  const open = useCallback(async ({ mode, orders: db, user }: { mode: Mode | null; orders: boolean; user?: SessionUser }) => {
     setStatus("loading");
     setAuthError("");
     try {
-      const b = connect(mode);
+      const b = connect(mode, user);
+      const allowed = user?.pages ?? [...PAGES];
+      setPages(allowed);
+      // Open on the first page this user may use; Settings ("My account") is always there.
+      setScreen(PAGES.find((p) => allowed.includes(p)) ?? "settings");
       const [menu, siteData] = await Promise.all([
         b.loadJson<{ categories: MenuCategoryData[] }>("data/menu.json"),
         b.loadJson<SiteData>("data/site.json"),
@@ -107,7 +115,8 @@ export function AdminApp() {
   const enter = async () => {
     const session = await getSession();
     await open(session);
-    if (session.orders && !session.pin) setNotice("Protect the admin: create a 4-digit sign-in PIN in Settings.");
+    if (session.user?.role === "admin" && session.orders && !session.pin)
+      setNotice("Protect the admin: create a 4-digit sign-in PIN in Settings.");
   };
 
   const signIn = async (username: string, password: string) => {
@@ -255,7 +264,14 @@ export function AdminApp() {
   };
 
   return (
-    <AppShell screen={screen} go={go} user={backend.user} onSignOut={signOut} newOrders={orders.data?.newOrders ?? 0}>
+    <AppShell
+      screen={screen}
+      go={go}
+      user={backend.user}
+      pages={pages}
+      onSignOut={signOut}
+      newOrders={orders.data?.newOrders ?? 0}
+    >
       {notice && <Toast message={notice} onClose={() => setNotice("")} />}
       {screen === "items" && (
         <MenuItems
@@ -291,7 +307,7 @@ export function AdminApp() {
           {screen === "orders" && <OrdersScreen data={orders.data} error={orders.error} onStatus={orders.setStatus} />}
           {screen === "stats" && <StatsScreen data={orders.data} error={orders.error} />}
           {screen === "payments" && <PaymentsScreen setDirty={setDirty} onSaved={setNotice} />}
-          {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} />}
+          {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} pages={pages} />}
         </>
       )}
     </AppShell>
@@ -578,17 +594,19 @@ function AppShell({
   user,
   onSignOut,
   newOrders,
+  pages,
   children,
 }: {
   screen: Screen;
   go: (to: Screen) => boolean;
   user: Backend["user"];
+  pages: Page[];
   onSignOut: () => void;
   newOrders: number;
   children: ReactNode;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
-  const nav: { group: string; items: { id: Screen; label: string; icon: IconName; badge?: number }[] }[] = [
+  const allNav: { group: string; items: { id: Screen; label: string; icon: IconName; badge?: number }[] }[] = [
     {
       group: "Menu",
       items: [
@@ -607,6 +625,10 @@ function AppShell({
     },
     { group: "Admin", items: [{ id: "settings", label: "Settings", icon: "settings" }] },
   ];
+  const nav = allNav
+    // Only the pages this user may open (Settings always: staff find "My account" there).
+    .map((g) => ({ ...g, items: g.items.filter((i) => i.id === "settings" || pages.includes(i.id as Page)) }))
+    .filter((g) => g.items.length > 0);
   const active = screen === "editor" ? "items" : screen;
   const initials = user.name
     .split(/\s+/)

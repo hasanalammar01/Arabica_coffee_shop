@@ -10,6 +10,7 @@ import {
   type OrderStatus,
   type Settings,
 } from "./orders-core.ts";
+import { cleanPages, type Page } from "./admin/permissions.ts";
 
 /**
  * Orders and settings live in Postgres (Neon, connected in Vercel → Storage), never in the
@@ -43,6 +44,15 @@ async function db() {
       lang text not null default 'en'
     )`;
     await sql`create index if not exists orders_created_at on orders (created_at desc)`;
+    await sql`create table if not exists staff (
+      id serial primary key,
+      username text not null unique,
+      password_hash text not null,
+      pages jsonb not null,
+      active boolean not null default true,
+      session_epoch integer not null default 0,
+      created_at timestamptz not null default now()
+    )`;
     await sql`create table if not exists hits (key text not null, at timestamptz not null default now())`;
     await sql`create index if not exists hits_key_at on hits (key, at)`;
   })().catch((e) => {
@@ -102,6 +112,80 @@ export async function saveSettings(patch: Partial<Settings>) {
   await sql`insert into settings (id, data) values (1, ${JSON.stringify(next)})
             on conflict (id) do update set data = excluded.data`;
   return next;
+}
+
+/* ---------- Staff accounts ---------- */
+
+export type StaffRow = {
+  id: number;
+  username: string;
+  passwordHash: string;
+  pages: Page[];
+  active: boolean;
+  sessionEpoch: number;
+  createdAt: string;
+};
+
+const toStaff = (r: Record<string, unknown>): StaffRow => ({
+  id: Number(r.id),
+  username: r.username as string,
+  passwordHash: r.password_hash as string,
+  pages: cleanPages(r.pages),
+  active: r.active === true,
+  sessionEpoch: Number(r.session_epoch),
+  createdAt: new Date(r.created_at as string).toISOString(),
+});
+
+export async function listStaff() {
+  const sql = await db();
+  return (await sql`select * from staff order by username`).map(toStaff);
+}
+
+export async function getStaff(id: number) {
+  const sql = await db();
+  const [row] = await sql`select * from staff where id = ${id}`;
+  return row ? toStaff(row) : null;
+}
+
+export async function findStaff(username: string) {
+  const sql = await db();
+  const [row] = await sql`select * from staff where username = ${username.trim().toLowerCase()}`;
+  return row ? toStaff(row) : null;
+}
+
+export async function createStaff(username: string, passwordHash: string, pages: Page[]) {
+  const sql = await db();
+  const [row] = await sql`
+    insert into staff (username, password_hash, pages) values (${username.trim().toLowerCase()}, ${passwordHash}, ${JSON.stringify(pages)})
+    on conflict (username) do nothing returning *`;
+  return row ? toStaff(row) : null; // null: the username is taken
+}
+
+/** Any change to an account also ends its sessions (the epoch is part of its signing secret). */
+export async function updateStaff(id: number, patch: { pages?: Page[]; active?: boolean; passwordHash?: string }) {
+  const sql = await db();
+  const current = await getStaff(id);
+  if (!current) return null;
+  const [row] = await sql`
+    update staff set
+      pages = ${JSON.stringify(patch.pages ?? current.pages)},
+      active = ${patch.active ?? current.active},
+      password_hash = ${patch.passwordHash ?? current.passwordHash},
+      session_epoch = session_epoch + 1
+    where id = ${id} returning *`;
+  return row ? toStaff(row) : null;
+}
+
+export async function deleteStaff(id: number) {
+  const sql = await db();
+  return (await sql`delete from staff where id = ${id} returning id`).length > 0;
+}
+
+/** "Sign out all devices": ends every staff session too. */
+export async function signOutAllStaff() {
+  if (!dbConfigured()) return;
+  const sql = await db();
+  await sql`update staff set session_epoch = session_epoch + 1`;
 }
 
 /* ---------- Orders ---------- */

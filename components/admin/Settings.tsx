@@ -4,12 +4,19 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   getSettings,
   saveAccount,
+  changeMyPassword,
+  createStaff,
+  deleteStaff,
+  listStaff,
   savePin,
   saveShopSettings,
   signOutAllDevices,
+  updateStaff,
+  type StaffAccount,
   testNotification,
   type SettingsData,
 } from "@/lib/admin/backend";
+import { PAGE_LABELS, PAGES, STAFF_DEFAULT, type Page } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
 import {
   PAYMENT_KINDS,
@@ -278,13 +285,24 @@ export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
 
 /* ---------- Settings ---------- */
 
-export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) => void; onSaved: (m: string) => void }) {
+export function SettingsScreen({
+  setDirty,
+  onSaved,
+  pages,
+}: {
+  setDirty: (d: boolean) => void;
+  onSaved: (m: string) => void;
+  pages: Page[];
+}) {
   const s = useShopSettings(setDirty, onSaved);
+  const isAdmin = s.data?.role === "admin";
+  // Ordering and notifications: the super admin, or staff given "Settings".
+  const canSettings = isAdmin || pages.includes("settings");
   const [pinOverride, setPinOverride] = useState<boolean | null>(null);
   const pinSet = pinOverride ?? Boolean(s.data?.pinSet);
   // The WhatsApp number also receives "forgot PIN" codes, so changing it asks for the PIN.
   const [whatsappPin, setWhatsappPin] = useState("");
-  const saved = s.data?.shop.whatsapp;
+  const saved = s.data?.shop?.whatsapp;
   const numberChanged =
     pinSet && Boolean(s.shop && saved) && (s.shop!.whatsapp.phone !== saved!.phone || s.shop!.whatsapp.apiKey !== saved!.apiKey);
   const [testing, setTesting] = useState<"whatsapp" | "email" | null>(null);
@@ -306,11 +324,17 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
   const shop = s.shop;
   return (
     <div className="page narrow-page">
-      <PageHeader eyebrow="Admin" title="Settings" description="Online orders, notifications and your admin login." />
+      <PageHeader
+        eyebrow="Admin"
+        title="Settings"
+        description={canSettings ? "Online orders, notifications and your login." : "Your login."}
+      />
       {s.error && <ErrorBanner message={s.error} onClose={() => s.setError("")} />}
-      {!shop && !s.error && <p className="muted-text">Loading…</p>}
-      {shop && s.data && (
+      {!s.data && !s.error && <p className="muted-text">Loading…</p>}
+      {s.data && (
         <>
+          {canSettings && shop && (
+          <>
           <section className="form-section">
             <div className="section-title">
               <h2>Online orders</h2>
@@ -362,15 +386,21 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
                   value={shop.whatsapp.phone}
                   onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, phone: e.target.value } })}
                   placeholder="+961 …"
+                  disabled={!isAdmin}
+                  title={isAdmin ? undefined : "Only the super admin can change this number."}
                 />
               </Field>
-              <Field label="CallMeBot key">
-                <input
-                  value={shop.whatsapp.apiKey}
-                  onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, apiKey: e.target.value } })}
-                  autoComplete="off"
-                />
-              </Field>
+              {isAdmin ? (
+                <Field label="CallMeBot key">
+                  <input
+                    value={shop.whatsapp.apiKey}
+                    onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, apiKey: e.target.value } })}
+                    autoComplete="off"
+                  />
+                </Field>
+              ) : (
+                <p className="field-hint">Only the super admin can change the WhatsApp number and key.</p>
+              )}
               {numberChanged && (
                 <Field label="Your PIN" required hint="Needed to change the number or key, which receive PIN reset codes.">
                   <PinInput value={whatsappPin} onChange={setWhatsappPin} autoComplete="off" />
@@ -413,16 +443,26 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
               </p>
             )}
           </section>
+          </>
+          )}
 
-          <AccountSection data={s.data} pinSet={pinSet} onSaved={onSaved} />
-          <DevicesSection onSaved={onSaved} />
-          <PinSection
-            pinSet={pinSet}
-            onSaved={(m) => {
-              setPinOverride(true);
-              onSaved(m);
-            }}
-          />
+          {isAdmin ? (
+            <>
+              <AccountSection data={s.data} pinSet={pinSet} onSaved={onSaved} />
+              <DevicesSection onSaved={onSaved} />
+              <PinSection
+                pinSet={pinSet}
+                onSaved={(m) => {
+                  setPinOverride(true);
+                  onSaved(m);
+                }}
+              />
+              <StaffSection onSaved={onSaved} />
+            </>
+          ) : (
+            <MyAccountSection username={s.data.username} onSaved={onSaved} />
+          )}
+          {canSettings && shop && (
           <SaveBar
             busy={s.busy}
             dirty={s.dirty}
@@ -435,6 +475,7 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
               setWhatsappPin("");
             }}
           />
+          )}
         </>
       )}
     </div>
@@ -638,5 +679,267 @@ function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string)
         {busy ? "Saving…" : pinSet ? "Change PIN" : "Create PIN"}
       </button>
     </form>
+  );
+}
+
+/* ---------- Staff: their own password ---------- */
+
+function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m: string) => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (next !== confirm) return setError("The two new passwords don't match.");
+    setBusy(true);
+    setError("");
+    try {
+      await changeMyPassword(current, next);
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      onSaved("Password changed. Your other devices are signed out.");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="form-section" onSubmit={submit}>
+      <div className="section-title">
+        <h2>My account</h2>
+        <p>
+          Signed in as <b>{username}</b>. To change your username or access, ask the super admin.
+        </p>
+      </div>
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="form-grid">
+        <Field label="Current password" required>
+          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        </Field>
+        <span aria-hidden />
+        <Field label="New password" required hint="At least 10 characters, not containing your username.">
+          <input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+        </Field>
+        <Field label="Repeat new password" required>
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+        </Field>
+      </div>
+      <button type="submit" className="button primary" disabled={busy || !current || !next || !confirm}>
+        {busy ? "Saving…" : "Change password"}
+      </button>
+    </form>
+  );
+}
+
+/* ---------- Super admin: staff accounts ---------- */
+
+function PageChecks({ value, onChange }: { value: Page[]; onChange: (pages: Page[]) => void }) {
+  return (
+    <div className="page-checks" role="group" aria-label="Pages this person can open">
+      {PAGES.map((p) => (
+        <label key={p}>
+          <input
+            type="checkbox"
+            checked={value.includes(p)}
+            onChange={() =>
+              onChange(value.includes(p) ? value.filter((x) => x !== p) : PAGES.filter((x) => x === p || value.includes(x)))
+            }
+          />
+          {PAGE_LABELS[p]}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
+  const [staff, setStaff] = useState<StaffAccount[] | null>(null);
+  const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [pages, setPages] = useState<Page[]>(STAFF_DEFAULT);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    listStaff().then(setStaff, (e) => setError(errorText(e)));
+  }, []);
+
+  const run = async (job: () => Promise<void>) => {
+    setBusy(true);
+    setError("");
+    try {
+      await job();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const replace = (row: StaffAccount) => setStaff((list) => (list ?? []).map((s) => (s.id === row.id ? row : s)));
+
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      const row = await createStaff({ username, password, pages });
+      setStaff((list) => [...(list ?? []), row].sort((a, b) => a.username.localeCompare(b.username)));
+      setUsername("");
+      setPassword("");
+      setPages(STAFF_DEFAULT);
+      onSaved(`Account "${row.username}" created. Give them the username and password.`);
+    });
+  };
+
+  return (
+    <section className="form-section">
+      <div className="section-title">
+        <h2>Staff accounts</h2>
+        <p>
+          Staff sign in on this same page with their own username and password, and only see the pages you tick. They
+          can never manage staff or change your login, PIN or the WhatsApp number.
+        </p>
+      </div>
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
+      {!staff && !error && <p className="muted-text">Loading…</p>}
+      {staff?.length === 0 && <p className="muted-text">No staff accounts yet.</p>}
+      <div className="staff-list">
+        {staff?.map((s) => (
+          <StaffRow
+            key={s.id}
+            account={s}
+            busy={busy}
+            run={run}
+            onChange={replace}
+            onDeleted={() => setStaff((l) => (l ?? []).filter((x) => x.id !== s.id))}
+            onSaved={onSaved}
+          />
+        ))}
+      </div>
+
+      <form className="staff-add" onSubmit={add}>
+        <h3>Add a staff member</h3>
+        <div className="form-grid">
+          <Field label="Username" required hint="3–40 letters, numbers, dots, dashes or underscores.">
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              autoComplete="off"
+              autoCapitalize="none"
+            />
+          </Field>
+          <Field label="Password" required hint="At least 10 characters. Give it to them privately.">
+            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+          </Field>
+        </div>
+        <span className="field-label">Pages they can open</span>
+        <PageChecks value={pages} onChange={setPages} />
+        <button type="submit" className="button primary" disabled={busy || !username || !password}>
+          {busy ? "Saving…" : "Create account"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function StaffRow({
+  account: s,
+  busy,
+  run,
+  onChange,
+  onDeleted,
+  onSaved,
+}: {
+  account: StaffAccount;
+  busy: boolean;
+  run: (job: () => Promise<void>) => void;
+  onChange: (row: StaffAccount) => void;
+  onDeleted: () => void;
+  onSaved: (m: string) => void;
+}) {
+  const [pages, setPages] = useState(s.pages);
+  const [password, setPassword] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const changed = pages.join() !== s.pages.join();
+  return (
+    <div className={`staff-row ${s.active ? "" : "disabled"}`}>
+      <div className="staff-row-head">
+        <b>{s.username}</b>
+        <span className={`status-badge ${s.active ? "accepted" : ""}`}>{s.active ? "Active" : "Disabled"}</span>
+      </div>
+      <PageChecks value={pages} onChange={setPages} />
+      <div className="staff-row-actions">
+        <Button
+          variant="secondary"
+          disabled={busy || !changed}
+          onClick={() =>
+            run(async () => {
+              onChange(await updateStaff({ id: s.id, pages }));
+              onSaved(`Access for "${s.username}" saved. They're signed out and see the new pages next time.`);
+            })
+          }
+        >
+          Save access
+        </Button>
+        <input
+          className="staff-password"
+          type="text"
+          placeholder="New password"
+          aria-label={`New password for ${s.username}`}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+        <Button
+          variant="secondary"
+          disabled={busy || !password}
+          onClick={() =>
+            run(async () => {
+              onChange(await updateStaff({ id: s.id, password }));
+              setPassword("");
+              onSaved(`New password set for "${s.username}". They're signed out.`);
+            })
+          }
+        >
+          Set password
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              onChange(await updateStaff({ id: s.id, active: !s.active }));
+              onSaved(s.active ? `"${s.username}" is disabled and signed out.` : `"${s.username}" can sign in again.`);
+            })
+          }
+        >
+          {s.active ? "Disable" : "Enable"}
+        </Button>
+        <Button
+          variant={confirmDelete ? "danger" : "ghost"}
+          disabled={busy}
+          onClick={() => {
+            if (!confirmDelete) return setConfirmDelete(true);
+            run(async () => {
+              await deleteStaff(s.id);
+              onDeleted();
+              onSaved(`"${s.username}" deleted.`);
+            });
+          }}
+        >
+          {confirmDelete ? "Tap again to delete" : "Delete"}
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   COOKIE,
-  credentialsMatch,
+  checkLogin,
+  currentUser,
   hashPassword,
-  isSignedIn,
   attemptFailed,
   attemptsBlocked,
   attemptSucceeded,
@@ -18,6 +18,7 @@ import {
   sameOrigin,
   sessionCookie,
 } from "@/lib/admin/auth";
+import { PAGES } from "@/lib/admin/permissions";
 import { mode } from "@/lib/admin/store";
 import { readJson } from "@/lib/http";
 import { pinProblem } from "@/lib/admin/pin";
@@ -26,10 +27,16 @@ import { sendWhatsApp } from "@/lib/notify";
 
 /** Is this browser signed in to the admin, and where will changes be saved? */
 export async function GET(req: NextRequest) {
-  const signedIn = await isSignedIn(req);
+  const user = await currentUser(req);
   return NextResponse.json(
-    // Whether a PIN exists is only told to a signed-in admin (no free hints for attackers).
-    { signedIn, mode: mode(), orders: dbConfigured(), pin: signedIn ? await pinSet() : undefined },
+    {
+      signedIn: Boolean(user),
+      mode: mode(),
+      orders: dbConfigured(),
+      // Only told to a signed-in super admin (no free hints for attackers).
+      pin: user?.role === "admin" ? await pinSet() : undefined,
+      user: user && { name: user.name, role: user.role, pages: user.role === "admin" ? [...PAGES] : user.pages },
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -101,10 +108,17 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  // Step 1: username and password.
+  // Step 1: username and password, for the super admin or a staff account.
   const { username, password } = body;
-  if (typeof username !== "string" || typeof password !== "string" || !(await credentialsMatch(username, password)))
-    return fail("password", "Wrong username or password. Try again.");
+  const who = typeof username === "string" && typeof password === "string" ? await checkLogin(username, password) : null;
+  if (!who) return fail("password", "Wrong username or password. Try again.");
+  // Staff have no PIN step.
+  if (who !== "admin") {
+    await attemptSucceeded(req, `password:staff:${who.username}`);
+    const res = NextResponse.json({ pin: false });
+    res.cookies.set(await sessionCookie(who));
+    return res;
+  }
   // Wrong attempts are only forgiven once the whole sign-in succeeds.
   if (await pinSet()) {
     const res = NextResponse.json({ pin: true });
