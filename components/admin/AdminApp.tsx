@@ -34,13 +34,14 @@ import { pinProblem } from "@/lib/admin/pin";
 import type { OrderStatus } from "@/lib/orders-core";
 import { ItemEditor, type Destination } from "./ItemEditor";
 import { MenuItems } from "./MenuItems";
+import { ActivityScreen } from "./Activity";
 import { NoDatabase, OrdersScreen, StatsScreen } from "./Orders";
 import { Sections } from "./Sections";
 import { PaymentsScreen, SettingsScreen } from "./Settings";
 import { ShopInfo } from "./ShopInfo";
 import { FullLogo, Icon, Logo, Toast, type IconName } from "./ui";
 
-type Screen = "items" | "editor" | "sections" | "shop" | "orders" | "stats" | "payments" | "settings";
+type Screen = "items" | "editor" | "sections" | "shop" | "orders" | "stats" | "payments" | "settings" | "activity";
 export type Editing = { item: DraftItem; sectionKey: string; isNew: boolean; afterKey?: string };
 export type Publish = (next: DraftSection[], message: string) => Promise<void>;
 
@@ -59,6 +60,7 @@ export function AdminApp() {
   const [ordersDb, setOrdersDb] = useState(false);
   // The pages this user may open (all for the super admin). The server enforces the same list.
   const [pages, setPages] = useState<Page[]>([...PAGES]);
+  const [isAdmin, setIsAdmin] = useState(true);
   const orders = useOrders(status === "ready" && ordersDb && (pages.includes("orders") || pages.includes("stats")));
 
   // Each screen opens at the top.
@@ -82,6 +84,7 @@ export function AdminApp() {
       const b = connect(mode, user);
       const allowed = user?.pages ?? [...PAGES];
       setPages(allowed);
+      setIsAdmin(!user || user.role === "admin");
       // Open on the first page this user may use; Settings ("My account") is always there.
       setScreen(PAGES.find((p) => allowed.includes(p)) ?? "settings");
       const [menu, siteData] = await Promise.all([
@@ -98,6 +101,23 @@ export function AdminApp() {
       setStatus("signed-out");
     }
   }, []);
+
+  // Check in every 30 seconds while the dashboard is open: keeps "online" accurate for the super admin,
+  // and sends someone whose account was disabled or signed out back to the sign-in screen.
+  useEffect(() => {
+    if (status !== "ready") return;
+    const id = setInterval(() => {
+      getSession()
+        .then((s) => {
+          if (s.signedIn) return;
+          setBackend(null);
+          setAuthError("You were signed out. Sign in again.");
+          setStatus("signed-out");
+        })
+        .catch(() => {}); // offline for a moment: try again next minute
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [status]);
 
   // Still signed in from earlier (12-hour session)? Go straight to the dashboard.
   useEffect(() => {
@@ -269,6 +289,7 @@ export function AdminApp() {
       go={go}
       user={backend.user}
       pages={pages}
+      isAdmin={isAdmin}
       onSignOut={signOut}
       newOrders={orders.data?.newOrders ?? 0}
     >
@@ -308,6 +329,7 @@ export function AdminApp() {
           {screen === "stats" && <StatsScreen data={orders.data} error={orders.error} />}
           {screen === "payments" && <PaymentsScreen setDirty={setDirty} onSaved={setNotice} />}
           {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} pages={pages} />}
+          {screen === "activity" && isAdmin && <ActivityScreen />}
         </>
       )}
     </AppShell>
@@ -595,12 +617,14 @@ function AppShell({
   onSignOut,
   newOrders,
   pages,
+  isAdmin,
   children,
 }: {
   screen: Screen;
   go: (to: Screen) => boolean;
   user: Backend["user"];
   pages: Page[];
+  isAdmin: boolean;
   onSignOut: () => void;
   newOrders: number;
   children: ReactNode;
@@ -623,11 +647,20 @@ function AppShell({
         { id: "payments", label: "Payment methods", icon: "card" },
       ],
     },
-    { group: "Admin", items: [{ id: "settings", label: "Settings", icon: "settings" }] },
+    {
+      group: "Admin",
+      items: [
+        { id: "settings", label: "Settings", icon: "settings" },
+        ...(isAdmin ? [{ id: "activity" as const, label: "Activity", icon: "clock" as const }] : []),
+      ],
+    },
   ];
   const nav = allNav
     // Only the pages this user may open (Settings always: staff find "My account" there).
-    .map((g) => ({ ...g, items: g.items.filter((i) => i.id === "settings" || pages.includes(i.id as Page)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => i.id === "settings" || i.id === "activity" || pages.includes(i.id as Page)),
+    }))
     .filter((g) => g.items.length > 0);
   const active = screen === "editor" ? "items" : screen;
   const initials = user.name
@@ -713,7 +746,7 @@ function AppShell({
   );
 }
 
-const ORDER_SCREENS: Screen[] = ["orders", "stats", "payments", "settings"];
+const ORDER_SCREENS: Screen[] = ["orders", "stats", "payments", "settings", "activity"];
 const POLL_MS = 15_000;
 
 /** A short chime for a new order (no audio file needed). Browsers allow it once staff have clicked the page. */

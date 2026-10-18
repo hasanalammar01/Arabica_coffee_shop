@@ -53,6 +53,16 @@ async function db() {
       session_epoch integer not null default 0,
       created_at timestamptz not null default now()
     )`;
+    // Presence: last request, and last sign-out (both null until the first sign-in).
+    await sql`alter table staff add column if not exists last_seen timestamptz`;
+    await sql`alter table staff add column if not exists last_signout timestamptz`;
+    await sql`create table if not exists activity (
+      id serial primary key,
+      at timestamptz not null default now(),
+      actor text not null,
+      action text not null
+    )`;
+    await sql`create index if not exists activity_at on activity (at desc)`;
     await sql`create table if not exists hits (key text not null, at timestamptz not null default now())`;
     await sql`create index if not exists hits_key_at on hits (key, at)`;
   })().catch((e) => {
@@ -186,6 +196,70 @@ export async function signOutAllStaff() {
   if (!dbConfigured()) return;
   const sql = await db();
   await sql`update staff set session_epoch = session_epoch + 1`;
+}
+
+/* ---------- Presence and activity ---------- */
+
+const ONLINE_MINUTES = 5;
+
+/** Notes that a staff member is active (at most one write a minute per person). */
+export async function touchStaff(id: number) {
+  const sql = await db();
+  await sql`update staff set last_seen = now() where id = ${id} and (last_seen is null or last_seen < now() - interval '1 minute')`;
+}
+
+/** A sign-in counts as activity straight away (it isn't throttled like touchStaff). */
+export async function markSignedIn(id: number) {
+  const sql = await db();
+  await sql`update staff set last_seen = now() where id = ${id}`;
+}
+
+export async function markSignedOut(id: number) {
+  const sql = await db();
+  await sql`update staff set last_signout = now() where id = ${id}`;
+}
+
+/** Online = active in the last 5 minutes and not signed out since. */
+export async function staffPresence() {
+  const sql = await db();
+  const rows = await sql`select id, last_seen, last_signout,
+      (last_seen > now() - make_interval(mins => ${ONLINE_MINUTES}) and (last_signout is null or last_signout < last_seen)) as online
+    from staff`;
+  return new Map(
+    rows.map((r) => [
+      Number(r.id),
+      {
+        online: r.online === true,
+        lastSeen: r.last_seen ? new Date(r.last_seen as string).toISOString() : null,
+        lastSignout: r.last_signout ? new Date(r.last_signout as string).toISOString() : null,
+      },
+    ]),
+  );
+}
+
+/**
+ * Records what someone did in the admin (never passwords or codes). Entries older than 90 days
+ * are removed as new ones arrive. A failed write never blocks the action itself.
+ */
+export async function logActivity(actor: string, action: string) {
+  if (!dbConfigured()) return;
+  try {
+    const sql = await db();
+    await sql`insert into activity (actor, action) values (${actor.slice(0, 60)}, ${action.slice(0, 300)})`;
+    await sql`delete from activity where at < now() - interval '90 days'`;
+  } catch (e) {
+    console.error("Activity log write failed:", e);
+  }
+}
+
+export type ActivityEntry = { id: number; at: string; actor: string; action: string };
+
+export async function listActivity(actor?: string, limit = 300): Promise<ActivityEntry[]> {
+  const sql = await db();
+  const rows = actor
+    ? await sql`select * from activity where actor = ${actor} order by id desc limit ${limit}`
+    : await sql`select * from activity order by id desc limit ${limit}`;
+  return rows.map((r) => ({ id: Number(r.id), at: new Date(r.at as string).toISOString(), actor: r.actor as string, action: r.action as string }));
 }
 
 /* ---------- Orders ---------- */

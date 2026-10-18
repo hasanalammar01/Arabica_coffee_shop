@@ -91,12 +91,27 @@ export type SettingsData = {
 
 /* Staff accounts (super admin only). */
 
-export type StaffAccount = { id: number; username: string; pages: Page[]; active: boolean; createdAt: string };
+export type StaffAccount = {
+  id: number;
+  username: string;
+  pages: Page[];
+  active: boolean;
+  createdAt: string;
+  /** Present in the list (not after create/update): active in the last 5 minutes. */
+  online?: boolean;
+  lastSeen?: string | null;
+  lastSignout?: string | null;
+};
+
+export type ActivityEntry = { id: number; at: string; actor: string; action: string };
+/** Super admin only: the last 300 actions, optionally one person's. */
+export const listActivity = async (actor = "") =>
+  (await (await api(`/api/admin/activity${actor ? `?actor=${encodeURIComponent(actor)}` : ""}`)).json()) as ActivityEntry[];
 
 export const listStaff = async () => (await (await api("/api/admin/staff")).json()) as StaffAccount[];
 export const createStaff = async (account: { username: string; password: string; pages: Page[] }) =>
   (await (await api("/api/admin/staff", { method: "POST", body: JSON.stringify(account) })).json()) as StaffAccount;
-export const updateStaff = async (change: { id: number; pages?: Page[]; active?: boolean; password?: string }) =>
+export const updateStaff = async (change: { id: number; pages?: Page[]; active?: boolean; password?: string; signOut?: boolean }) =>
   (await (await api("/api/admin/staff", { method: "PATCH", body: JSON.stringify(change) })).json()) as StaffAccount;
 export const deleteStaff = (id: number) => api("/api/admin/staff", { method: "DELETE", body: JSON.stringify({ id }) });
 

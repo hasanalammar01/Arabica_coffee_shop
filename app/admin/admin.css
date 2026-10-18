@@ -2028,13 +2028,87 @@ html:has(.admin .mobile-header) {
     align-items: center;
     gap: 8px;
   }
-  & .staff-password {
-    width: 170px;
-    height: 44px;
-    padding: 0 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: white;
+  & .presence {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  & .presence.online {
+    color: var(--success);
+    font-weight: 500;
+  }
+  & .presence.online::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--success);
+  }
+  & .credentials-card {
+    margin-bottom: 18px;
+    padding: 16px 18px;
+    border: 1px solid var(--caramel);
+    border-radius: 10px;
+    background: #fdf6ea;
+  }
+  & .credentials-card p {
+    margin: 0 0 10px;
+    line-height: 1.5;
+  }
+  & .credentials-card dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 16px;
+    margin: 0 0 12px;
+  }
+  & .credentials-card dt {
+    color: var(--muted);
+  }
+  & .credentials-card dd {
+    margin: 0;
+    font: 600 16px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.04em;
+  }
+  & .credentials-card > div {
+    display: flex;
+    gap: 8px;
+  }
+  & .activity-filter {
+    max-width: 260px;
+    margin-bottom: 14px;
+  }
+  & .activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0;
+  }
+  & .activity-list li {
+    display: grid;
+    grid-template-columns: 150px 110px 1fr;
+    gap: 12px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  & .activity-list li:last-child {
+    border-bottom: 0;
+  }
+  & .activity-list time {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  & .activity-list li.warning span,
+  & .activity-list li.warning b {
+    color: var(--red);
+  }
+  @media (max-width: 760px) {
+    & .activity-list li {
+      grid-template-columns: 1fr;
+      gap: 2px;
+      padding: 10px 14px;
+    }
   }
   & .staff-add {
     padding-top: 18px;

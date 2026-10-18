@@ -11,6 +11,7 @@ import {
   recordHit,
   saveSettings,
   signOutAllStaff,
+  touchStaff,
   type StaffRow,
 } from "@/lib/db";
 import type { AdminUser } from "./permissions.ts";
@@ -157,8 +158,10 @@ export async function currentUser(req: NextRequest): Promise<AdminUser | null> {
   }
   if (user && dbConfigured()) {
     const staff = await getStaff(Number(user.slice(1)));
-    if (staff && verifyToken(staffSecret(staff), "", value))
+    if (staff && verifyToken(staffSecret(staff), "", value)) {
+      await touchStaff(staff.id); // "online" in Staff accounts (one write a minute at most)
       return { role: "staff", id: staff.id, name: staff.username, pages: staff.pages };
+    }
   }
   return null;
 }

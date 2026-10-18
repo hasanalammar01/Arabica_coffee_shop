@@ -3,6 +3,7 @@ import { guard } from "@/lib/admin/guard";
 import { canPublish } from "@/lib/admin/permissions";
 import { ALLOWED, mode, publish, readText, StoreError } from "@/lib/admin/store";
 import { publishProblem } from "@/lib/admin/publish-check";
+import { logActivity } from "@/lib/db";
 import { readJson } from "@/lib/http";
 
 const text = (message: string, status: number) => new NextResponse(message, { status });
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
       `${body!.message as string} (via menu admin, by ${g.user.role === "admin" ? "super admin" : `staff: ${g.user.name}`})`,
       base,
     );
+    await logActivity(g.user.name, body!.message as string);
     return NextResponse.json({ versions });
   } catch (e) {
     return fail(e);

@@ -16,6 +16,8 @@ import {
   testNotification,
   type SettingsData,
 } from "@/lib/admin/backend";
+import { credentialsPdf } from "@/lib/admin/credentials-pdf";
+import { generatePassword } from "@/lib/admin/password";
 import { PAGE_LABELS, PAGES, STAFF_DEFAULT, type Page } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
 import {
@@ -760,16 +762,78 @@ function PageChecks({ value, onChange }: { value: Page[]; onChange: (pages: Page
   );
 }
 
+type NewCredentials = { username: string; password: string; pages: Page[] };
+
+/** Saves the sign-in details as a one-page PDF (made in this browser; nothing is uploaded). */
+function downloadCredentials(c: NewCredentials) {
+  const pdf = credentialsPdf({
+    username: c.username,
+    password: c.password,
+    signInUrl: `${location.origin}/admin`,
+    pages: c.pages.map((p) => PAGE_LABELS[p]),
+    date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+  });
+  const url = URL.createObjectURL(new Blob([pdf], { type: "application/pdf" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `arabica-staff-${c.username}.pdf`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Shown once after creating an account or setting a password: the server can't show it again. */
+function CredentialsCard({ creds, onClose }: { creds: NewCredentials; onClose: () => void }) {
+  return (
+    <div className="credentials-card" role="status">
+      <p>
+        <b>Sign-in details for {creds.username}</b> — shown only now. Download the PDF and give it to them privately.
+      </p>
+      <dl>
+        <dt>Username</dt>
+        <dd>{creds.username}</dd>
+        <dt>Password</dt>
+        <dd>{creds.password}</dd>
+      </dl>
+      <div>
+        <Button onClick={() => downloadCredentials(creds)}>Download PDF</Button>
+        <Button variant="ghost" onClick={onClose}>
+          Done
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const ago = (iso: string) => {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 60) return `${Math.max(1, minutes)} min ago`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
+  return `${Math.round(minutes / (60 * 24))} days ago`;
+};
+
+/** "Online now", "Signed out 2 h ago", "Last seen 5 days ago" or "Never signed in". */
+function presence(s: StaffAccount) {
+  if (s.online) return { online: true, text: "Online now" };
+  if (s.lastSignout && (!s.lastSeen || s.lastSignout >= s.lastSeen)) return { online: false, text: `Signed out ${ago(s.lastSignout)}` };
+  if (s.lastSeen) return { online: false, text: `Last seen ${ago(s.lastSeen)}` };
+  return { online: false, text: "Never signed in" };
+}
+
 function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
   const [staff, setStaff] = useState<StaffAccount[] | null>(null);
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(generatePassword);
   const [pages, setPages] = useState<Page[]>(STAFF_DEFAULT);
   const [busy, setBusy] = useState(false);
+  const [creds, setCreds] = useState<NewCredentials | null>(null);
 
+  // Refreshed every minute so "Online now" stays current.
   useEffect(() => {
-    listStaff().then(setStaff, (e) => setError(errorText(e)));
+    const load = () => listStaff().then(setStaff, (e) => setError(errorText(e)));
+    load();
+    const id = setInterval(load, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   const run = async (job: () => Promise<void>) => {
@@ -783,17 +847,20 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
       setBusy(false);
     }
   };
-  const replace = (row: StaffAccount) => setStaff((list) => (list ?? []).map((s) => (s.id === row.id ? row : s)));
+  // Updates keep the presence fields the list already had.
+  const replace = (row: StaffAccount) =>
+    setStaff((list) => (list ?? []).map((s) => (s.id === row.id ? { ...s, ...row } : s)));
 
   const add = (e: FormEvent) => {
     e.preventDefault();
     run(async () => {
       const row = await createStaff({ username, password, pages });
       setStaff((list) => [...(list ?? []), row].sort((a, b) => a.username.localeCompare(b.username)));
+      setCreds({ username: row.username, password, pages: row.pages });
       setUsername("");
-      setPassword("");
+      setPassword(generatePassword());
       setPages(STAFF_DEFAULT);
-      onSaved(`Account "${row.username}" created. Give them the username and password.`);
+      onSaved(`Account "${row.username}" created. Download the PDF with their sign-in details.`);
     });
   };
 
@@ -811,6 +878,7 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
           {error}
         </p>
       )}
+      {creds && <CredentialsCard creds={creds} onClose={() => setCreds(null)} />}
       {!staff && !error && <p className="muted-text">Loading…</p>}
       {staff?.length === 0 && <p className="muted-text">No staff accounts yet.</p>}
       <div className="staff-list">
@@ -823,6 +891,7 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
             onChange={replace}
             onDeleted={() => setStaff((l) => (l ?? []).filter((x) => x.id !== s.id))}
             onSaved={onSaved}
+            onCredentials={setCreds}
           />
         ))}
       </div>
@@ -838,10 +907,13 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
               autoCapitalize="none"
             />
           </Field>
-          <Field label="Password" required hint="At least 10 characters. Give it to them privately.">
-            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+          <Field label="Password" required hint="Made for you; you can also type your own (10+ characters).">
+            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" spellCheck={false} />
           </Field>
         </div>
+        <button type="button" className="inline-link" onClick={() => setPassword(generatePassword())}>
+          Generate another password
+        </button>
         <span className="field-label">Pages they can open</span>
         <PageChecks value={pages} onChange={setPages} />
         <button type="submit" className="button primary" disabled={busy || !username || !password}>
@@ -859,6 +931,7 @@ function StaffRow({
   onChange,
   onDeleted,
   onSaved,
+  onCredentials,
 }: {
   account: StaffAccount;
   busy: boolean;
@@ -866,16 +939,18 @@ function StaffRow({
   onChange: (row: StaffAccount) => void;
   onDeleted: () => void;
   onSaved: (m: string) => void;
+  onCredentials: (c: NewCredentials) => void;
 }) {
   const [pages, setPages] = useState(s.pages);
-  const [password, setPassword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const status = presence(s);
   const changed = pages.join() !== s.pages.join();
   return (
     <div className={`staff-row ${s.active ? "" : "disabled"}`}>
       <div className="staff-row-head">
         <b>{s.username}</b>
-        <span className={`status-badge ${s.active ? "accepted" : ""}`}>{s.active ? "Active" : "Disabled"}</span>
+        <span className={`status-badge ${s.active ? "accepted" : ""}`}>{s.active ? "Active" : "Stopped"}</span>
+        <span className={`presence ${status.online ? "online" : ""}`}>{status.text}</span>
       </div>
       <PageChecks value={pages} onChange={setPages} />
       <div className="staff-row-actions">
@@ -891,39 +966,47 @@ function StaffRow({
         >
           Save access
         </Button>
-        <input
-          className="staff-password"
-          type="text"
-          placeholder="New password"
-          aria-label={`New password for ${s.username}`}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-        />
         <Button
           variant="secondary"
-          disabled={busy || !password}
+          disabled={busy}
           onClick={() =>
             run(async () => {
+              const password = generatePassword();
               onChange(await updateStaff({ id: s.id, password }));
-              setPassword("");
-              onSaved(`New password set for "${s.username}". They're signed out.`);
+              onCredentials({ username: s.username, password, pages: s.pages });
+              onSaved(`New password set for "${s.username}". They're signed out. Download the PDF above.`);
             })
           }
         >
-          Set password
+          New password + PDF
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={busy || !s.active || !(s.online || (s.lastSeen && (!s.lastSignout || s.lastSeen > s.lastSignout)))}
+          onClick={() =>
+            run(async () => {
+              onChange({ ...(await updateStaff({ id: s.id, signOut: true })), online: false, lastSignout: new Date().toISOString() });
+              onSaved(`"${s.username}" is signed out. They can sign in again with their password.`);
+            })
+          }
+        >
+          Sign out now
         </Button>
         <Button
           variant="secondary"
           disabled={busy}
           onClick={() =>
             run(async () => {
-              onChange(await updateStaff({ id: s.id, active: !s.active }));
-              onSaved(s.active ? `"${s.username}" is disabled and signed out.` : `"${s.username}" can sign in again.`);
+              onChange({ ...(await updateStaff({ id: s.id, active: !s.active })), online: false });
+              onSaved(
+                s.active
+                  ? `"${s.username}" is stopped and signed out. They can't sign in until you restart the account.`
+                  : `"${s.username}" can sign in again.`,
+              );
             })
           }
         >
-          {s.active ? "Disable" : "Enable"}
+          {s.active ? "Stop account" : "Restart account"}
         </Button>
         <Button
           variant={confirmDelete ? "danger" : "ghost"}

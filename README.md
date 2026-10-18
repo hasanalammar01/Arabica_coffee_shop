@@ -51,6 +51,12 @@ The super admin (the login above, with the PIN) creates staff accounts in **Sett
 
 Accounts live in the `staff` table (passwords hashed with scrypt), never in this repository.
 
+New accounts and password resets get a generated password (`xxxx-xxxx-xxxx`, no look-alike characters) and a **Download PDF** with the sign-in address, username, password and pages. The PDF is made in the browser (`lib/admin/credentials-pdf.ts`) and the password is shown only that once, since the server keeps only its hash. Each account shows **Online now** (active in the last 5 minutes), **Signed out …**, **Last seen …** or **Never signed in**.
+
+### Activity log
+
+**Activity** (super admin only) lists everything done in the admin, newest first: sign-ins and sign-outs, wrong passwords and PINs, menu and shop publishes, order status changes, settings saves (which parts changed), staff account changes, test messages and PIN resets. Filter by person. Entries are kept 90 days (`activity` table); passwords and codes are never recorded, and a username is only logged for a failed sign-in when it belongs to a real account.
+
 ### Sign-in PIN
 
 Once a 4-digit PIN is created in **Settings → Sign-in PIN**, signing in takes the password and then the PIN. Changing the login, the PIN or the WhatsApp number needs the PIN too, and wrong PINs count towards the same lockout as wrong passwords (5 tries, then 15 minutes).

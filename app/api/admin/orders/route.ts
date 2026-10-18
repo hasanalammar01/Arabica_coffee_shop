@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { guard } from "@/lib/admin/guard";
 import { can } from "@/lib/admin/permissions";
-import { ordersOverview, setOrderStatus } from "@/lib/db";
+import { logActivity, ordersOverview, setOrderStatus } from "@/lib/db";
 import { readJson } from "@/lib/http";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/orders-core";
 
@@ -34,5 +34,6 @@ export async function PATCH(req: NextRequest) {
     return new NextResponse("Bad request.", { status: 400 });
   if (!(await setOrderStatus(id as number, status as OrderStatus)))
     return new NextResponse("That order doesn't exist.", { status: 404 });
+  await logActivity(g.user.name, `Order #${id}: marked ${status}`);
   return new NextResponse(null, { status: 204 });
 }

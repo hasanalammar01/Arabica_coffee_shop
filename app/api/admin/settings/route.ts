@@ -13,7 +13,7 @@ import {
 import { guard } from "@/lib/admin/guard";
 import { can, mergeShop, shopForUser } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
-import { findStaff, getSettings, saveSettings, updateStaff } from "@/lib/db";
+import { findStaff, getSettings, logActivity, saveSettings, updateStaff } from "@/lib/db";
 import { readJson } from "@/lib/http";
 import { sendEmail, sendWhatsApp } from "@/lib/notify";
 import { cleanShopSettings } from "@/lib/orders-core";
@@ -66,6 +66,16 @@ export async function PUT(req: NextRequest) {
   }
 
   await saveSettings(shop);
+  // Record what actually changed (never the WhatsApp key itself).
+  const was = cleanShopSettings(current);
+  const changes = [
+    JSON.stringify(was.payments) !== JSON.stringify(shop.payments) && "payment methods",
+    was.ordersEnabled !== shop.ordersEnabled && `online orders turned ${shop.ordersEnabled ? "on" : "off"}`,
+    was.whatsapp.enabled !== shop.whatsapp.enabled && `WhatsApp alerts turned ${shop.whatsapp.enabled ? "on" : "off"}`,
+    numberChanged && "WhatsApp number or key changed",
+    JSON.stringify(was.email) !== JSON.stringify(shop.email) && "email alerts",
+  ].filter(Boolean);
+  if (changes.length) await logActivity(g.user.name, `Settings saved: ${changes.join(", ")}`);
   return NextResponse.json({ shop: shopForUser(shop, g.user) });
 }
 
@@ -91,6 +101,7 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       return text(errorText(e), 400);
     }
+    await logActivity(user.name, `Sent a test ${body.channel === "whatsapp" ? "WhatsApp" : "email"}`);
     return new NextResponse(null, { status: 204 });
   }
 
@@ -98,6 +109,7 @@ export async function POST(req: NextRequest) {
   if (body.action === "signout-all") {
     if (user.role !== "admin") return adminOnly();
     await signOutEverywhere();
+    await logActivity(user.name, "Signed out all devices (every staff member too)");
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
     return res;
@@ -128,6 +140,7 @@ export async function POST(req: NextRequest) {
     const problem = newPasswordProblem(body.newPassword, user.name) ?? (body.newPassword ? null : "Type a new password.");
     if (problem) return text(problem, 400);
     const updated = await updateStaff(user.id, { passwordHash: hashPassword(body.newPassword as string) });
+    await logActivity(user.name, "Changed own password");
     // The change ends this account's other sessions; keep this one signed in.
     const res = new NextResponse(null, { status: 204 });
     if (updated) res.cookies.set(await sessionCookie(updated));
@@ -144,6 +157,7 @@ export async function POST(req: NextRequest) {
     const problem = pinProblem(newPin);
     if (problem) return text(problem, 400);
     await saveSettings({ pinHash: hashPassword(newPin) });
+    await logActivity(user.name, settings.pinHash ? "Changed the sign-in PIN" : "Created the sign-in PIN");
     // A new PIN signs every other session out; keep this one signed in.
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
@@ -160,6 +174,11 @@ export async function POST(req: NextRequest) {
     username,
     ...(body.newPassword ? { passwordHash: hashPassword(body.newPassword as string) } : {}),
   });
+  const what = [
+    username !== settings.username && `username to "${username}"`,
+    Boolean(body.newPassword) && "password",
+  ].filter(Boolean);
+  if (what.length) await logActivity(username, `Changed the super admin ${what.join(" and ")}`);
   // A new password signs every session out; keep this one signed in.
   const res = new NextResponse(null, { status: 204 });
   res.cookies.set(await sessionCookie());

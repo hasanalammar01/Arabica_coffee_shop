@@ -22,7 +22,17 @@ import { PAGES } from "@/lib/admin/permissions";
 import { mode } from "@/lib/admin/store";
 import { readJson } from "@/lib/http";
 import { pinProblem } from "@/lib/admin/pin";
-import { dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
+import {
+  dbConfigured,
+  findStaff,
+  getSettings,
+  limited,
+  logActivity,
+  markSignedIn,
+  markSignedOut,
+  recordHit,
+  saveSettings,
+} from "@/lib/db";
 import { sendWhatsApp } from "@/lib/notify";
 
 /** Is this browser signed in to the admin, and where will changes be saved? */
@@ -69,6 +79,7 @@ export async function POST(req: NextRequest) {
     if (await limited("pin-reset:send", 3, 60))
       return new NextResponse("A code was already sent 3 times this hour. Wait a little, then try again.", { status: 429 });
     const code = await newPinResetCode();
+    await logActivity((await getSettings()).username, "Requested a PIN reset code by WhatsApp");
     await recordHit("pin-reset:send");
     try {
       await sendWhatsApp(
@@ -83,13 +94,16 @@ export async function POST(req: NextRequest) {
 
   if (body.action === "pin-reset") {
     if (!(await pinPending(req))) return again();
-    if (typeof body.code !== "string" || !(await pinResetMatches(body.code)))
+    if (typeof body.code !== "string" || !(await pinResetMatches(body.code))) {
+      await logActivity((await getSettings()).username, "Wrong PIN reset code");
       return fail("reset-code", "That code is wrong or has expired.");
+    }
     const newPin = typeof body.newPin === "string" ? body.newPin : "";
     const problem = pinProblem(newPin);
     if (problem) return new NextResponse(problem, { status: 400 });
     await saveSettings({ pinHash: hashPassword(newPin), pinReset: "" });
     await attemptSucceeded(req, "pin-reset");
+    await logActivity((await getSettings()).username, "Reset the sign-in PIN with a WhatsApp code and signed in");
     // The new PIN changes the signing secret: every other session ends, this one starts fresh.
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
@@ -100,8 +114,13 @@ export async function POST(req: NextRequest) {
   // Step 2: the PIN, only after a correct password in the last 5 minutes.
   if ("pin" in body) {
     if (!(await pinPending(req))) return again();
-    if (typeof body.pin !== "string" || !(await pinMatches(body.pin))) return fail("pin", "Wrong PIN. Try again.");
+    const admin = (await getSettings()).username;
+    if (typeof body.pin !== "string" || !(await pinMatches(body.pin))) {
+      await logActivity(admin, "Wrong PIN");
+      return fail("pin", "Wrong PIN. Try again.");
+    }
     await attemptSucceeded(req, "pin");
+    await logActivity(admin, "Signed in");
     const res = new NextResponse(null, { status: 204 });
     res.cookies.set(await sessionCookie());
     res.cookies.delete({ name: PIN_COOKIE, path: "/api/admin" });
@@ -111,10 +130,18 @@ export async function POST(req: NextRequest) {
   // Step 1: username and password, for the super admin or a staff account.
   const { username, password } = body;
   const who = typeof username === "string" && typeof password === "string" ? await checkLogin(username, password) : null;
-  if (!who) return fail("password", "Wrong username or password. Try again.");
+  if (!who) {
+    // Name the account only if it exists: a password typed into the username box must never be logged.
+    const name = typeof username === "string" ? username.trim().toLowerCase() : "";
+    const known = name && (name === (await getSettings()).username.toLowerCase() || (await findStaff(name)));
+    await logActivity(known ? name : "(unknown)", known ? "Wrong password" : "Sign-in with an unknown username");
+    return fail("password", "Wrong username or password. Try again.");
+  }
   // Staff have no PIN step.
   if (who !== "admin") {
     await attemptSucceeded(req, `password:staff:${who.username}`);
+    await markSignedIn(who.id);
+    await logActivity(who.username, "Signed in");
     const res = NextResponse.json({ pin: false });
     res.cookies.set(await sessionCookie(who));
     return res;
@@ -126,14 +153,20 @@ export async function POST(req: NextRequest) {
     return res;
   }
   await attemptSucceeded(req, "password");
+  await logActivity((await getSettings()).username, "Signed in");
   const res = NextResponse.json({ pin: false });
   res.cookies.set(await sessionCookie());
   return res;
 }
 
 /** Sign out. */
-export function DELETE(req: NextRequest) {
+export async function DELETE(req: NextRequest) {
   if (!sameOrigin(req)) return new NextResponse("Not allowed.", { status: 403 });
+  const user = await currentUser(req);
+  if (user && dbConfigured()) {
+    if (user.role === "staff") await markSignedOut(user.id);
+    await logActivity(user.name, "Signed out");
+  }
   const res = new NextResponse(null, { status: 204 });
   res.cookies.delete({ name: COOKIE, path: "/api/admin" });
   res.cookies.delete({ name: PIN_COOKIE, path: "/api/admin" });
