@@ -1288,7 +1288,7 @@
   & .section-row > div:not(.section-name-wrap) {
     display: flex;
   }
-  & .section-row > div button {
+  & .section-row > div:not(.section-name-wrap) button {
     width: 44px;
     height: 44px;
     display: grid;
@@ -1297,14 +1297,14 @@
     background: white;
     cursor: pointer;
   }
-  & .section-row > div button:disabled {
+  & .section-row > div:not(.section-name-wrap) button:disabled {
     opacity: 0.4;
     cursor: default;
   }
-  & .section-row > div button:first-child svg {
+  & .section-row > div:not(.section-name-wrap) button:first-child svg {
     transform: rotate(-90deg);
   }
-  & .section-row > div button:last-child svg {
+  & .section-row > div:not(.section-name-wrap) button:last-child svg {
     transform: rotate(90deg);
   }
   & .new-section {
@@ -1910,13 +1910,20 @@ html:has(.admin .mobile-header) {
     align-items: center;
     gap: 8px;
   }
-  & .modifier-rules input {
-    width: 56px;
+  & .modifier-rules input,
+  & .modifier-rules select {
+    width: 84px;
     height: 40px;
     border: 1px solid var(--line);
     border-radius: 8px;
     text-align: center;
     background: white;
+    color: var(--ink);
+  }
+  & .modifier-rules select {
+    width: auto;
+    padding: 0 10px;
+    text-align: start;
   }
   & .preview-status {
     display: inline-block;
@@ -1966,6 +1973,22 @@ html:has(.admin .mobile-header) {
       grid-template-columns: 1fr;
       gap: 4px;
     }
+  }
+
+  /* Sign-in PIN */
+  & .pin-input {
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 0.6em;
+    padding-left: 0.6em; /* balances the trailing letter-spacing */
+  }
+  & .pin-input.small {
+    max-width: 160px;
+    font-size: 20px;
+  }
+  & .sign-in-card .button.ghost {
+    margin-top: 10px;
+    color: var(--muted);
   }
 
   /* Online orders, statistics and settings */

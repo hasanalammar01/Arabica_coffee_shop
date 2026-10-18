@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import type { MenuItem } from "@/data/menu";
+import { currency, type MenuItem } from "@/data/menu";
+import { formatAmount } from "@/lib/format";
 import { pick, t, type Lang } from "@/lib/i18n";
+import { chooseHint } from "@/lib/orders-core";
 import { ItemDisclosure } from "./ItemDisclosure";
 
 export { ItemInfoGroup } from "./ItemDisclosure";
@@ -12,7 +14,9 @@ export function itemDetails(item: MenuItem, lang: Lang) {
   const ingredients = pick(lang, item.ingredients ?? "", item.ingredientsAr).trim();
   const allergens = item.allergens ?? [];
   const options = (item.options ?? []).map((o, i) => pick(lang, o, item.optionsAr?.[i]));
-  if (!description && !options.length && !ingredients && !allergens.length) return null;
+  const groups = item.modifiers ?? [];
+  if (!description && !options.length && !groups.length && !ingredients && !allergens.length) return null;
+  const label = lang === "ar" ? currency.labelAr : currency.label;
   return (
     <>
       {description && (
@@ -20,18 +24,17 @@ export function itemDetails(item: MenuItem, lang: Lang) {
           {description}
         </p>
       )}
-      {options.length > 0 && (
-        <div>
-          <p className="mb-1 font-medium text-ink">{d.menu.options}</p>
-          <ul className="space-y-0.5">
-            {options.map((o) => (
-              <li key={o} dir="auto" className="[overflow-wrap:anywhere]">
-                {o}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {options.length > 0 && <ChoiceList title={d.menu.options} hint={d.order.pickOne} choices={options} />}
+      {groups.map((g) => (
+        <ChoiceList
+          key={g.id}
+          title={pick(lang, g.name, g.nameAr)}
+          hint={chooseHint(g, d.order)}
+          choices={g.choices.map(
+            (c) => `${pick(lang, c.name, c.nameAr)}${c.price ? ` (+${formatAmount(c.price)} ${label})` : ""}`,
+          )}
+        />
+      ))}
       {ingredients && (
         <p className="[overflow-wrap:anywhere]">
           <span className="mb-1 block font-medium text-ink">{d.menu.ingredients}</span>
@@ -54,6 +57,24 @@ export function itemDetails(item: MenuItem, lang: Lang) {
         </div>
       )}
     </>
+  );
+}
+
+/** A heading ("Presses · Pick one") over a bulleted list of choices. */
+function ChoiceList({ title, hint, choices }: { title: string; hint: string; choices: string[] }) {
+  return (
+    <div>
+      <p className="mb-1 font-medium text-ink">
+        {title} <span className="text-xs font-normal text-muted">· {hint}</span>
+      </p>
+      <ul className="list-disc space-y-0.5 ps-5 marker:text-caramel">
+        {choices.map((c) => (
+          <li key={c} dir="auto" className="[overflow-wrap:anywhere]">
+            {c}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

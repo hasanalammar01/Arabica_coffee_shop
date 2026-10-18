@@ -35,6 +35,16 @@ type Props = {
   setDirty: (dirty: boolean) => void;
 };
 
+/** The three ways guests choose from a group, stored as min/max picks. "any" keeps its "up to". */
+type ChooseRule = "one" | "one-optional" | "any";
+const RULES: Record<ChooseRule, Pick<DraftModifier, "min" | "max">> = {
+  one: { min: "1", max: "1" },
+  "one-optional": { min: "0", max: "1" },
+  any: { min: "0", max: "" },
+};
+const chooseRule = (m: DraftModifier): ChooseRule =>
+  m.max === "1" ? (Number(m.min || 0) >= 1 ? "one" : "one-optional") : "any";
+
 export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, setDirty }: Props) {
   const original = editing.item;
   const [item, setItem] = useState(original);
@@ -61,6 +71,9 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
     setItem((current) => ({ ...current, ...patch }));
     setLocalDirty(true);
   };
+
+  // Other items that already have order options, to copy them in one step.
+  const copySources = sections.flatMap((s) => s.items).filter((i) => i.key !== item.key && i.modifiers.length > 0);
 
   const sizes = pricing === "size" ? item.sizes : [];
   const sizeInvalid =
@@ -592,10 +605,28 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
             <div className="section-title">
               <h2>Order options</h2>
               <p>
-                Choices guests make when ordering online, such as milk or an extra shot. Used only when online
-                ordering is on. A price is added to the item price.
+                Choices like Nestlé (with / without) or the number of presses (1, 1½, 2). Guests see them as a list
+                in the item&apos;s details and choose when ordering online. A price is added to the item price.
               </p>
             </div>
+            {copySources.length > 0 && (
+              <Field label="Copy choices from another item" hint="Replaces this item's order options with a copy.">
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const source = copySources.find((i) => i.key === e.target.value);
+                    if (source) update({ modifiers: structuredClone(source.modifiers) });
+                  }}
+                >
+                  <option value="">Choose an item…</option>
+                  {copySources.map((i) => (
+                    <option key={i.key} value={i.key}>
+                      {i.name} ({i.modifiers.map((m) => m.name).join(", ")})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             {item.modifiers.map((m, mi) => (
               <fieldset className="modifier-group" key={mi}>
                 <legend className="sr-only">Option group {mi + 1}</legend>
@@ -626,24 +657,31 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 </div>
                 <div className="modifier-rules">
                   <label>
-                    Guests pick at least
-                    <input
-                      inputMode="numeric"
-                      value={m.min}
-                      placeholder="0"
-                      onChange={(e) => setModifier(mi, { min: e.target.value.replace(/\D/g, "") })}
-                    />
+                    How guests choose
+                    <select
+                      value={chooseRule(m)}
+                      onChange={(e) => setModifier(mi, RULES[e.target.value as ChooseRule])}
+                    >
+                      <option value="one">Pick one (required)</option>
+                      <option value="one-optional">Pick one (optional)</option>
+                      <option value="any">Pick any</option>
+                    </select>
                   </label>
-                  <label>
-                    and at most
-                    <input
-                      inputMode="numeric"
-                      value={m.max}
-                      placeholder="1"
-                      onChange={(e) => setModifier(mi, { max: e.target.value.replace(/\D/g, "") })}
-                    />
-                  </label>
+                  {chooseRule(m) === "any" && (
+                    <label>
+                      up to
+                      <input
+                        inputMode="numeric"
+                        value={m.max}
+                        placeholder="no limit"
+                        onChange={(e) => setModifier(mi, { max: e.target.value.replace(/\D/g, "") })}
+                      />
+                    </label>
+                  )}
                 </div>
+                {chooseRule(m) === "one" && (
+                  <p className="field-hint">The first choice is pre-selected for guests, so put the usual one first.</p>
+                )}
                 {m.choices.map((c, ci) => {
                   const setChoice = (patch: Partial<DraftModifier["choices"][number]>) =>
                     setModifier(mi, { choices: m.choices.map((x, i) => (i === ci ? { ...x, ...patch } : x)) });
@@ -699,7 +737,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
                 update({
                   modifiers: [
                     ...item.modifiers,
-                    { name: "", nameAr: "", min: "0", max: "1", choices: [{ name: "", nameAr: "", price: "" }] },
+                    { name: "", nameAr: "", ...RULES.one, choices: [{ name: "", nameAr: "", price: "" }] },
                   ],
                 })
               }
@@ -709,8 +747,7 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
             {attempted && modifierInvalid && (
               <div className="price-error">
                 <Icon name="warning" />
-                Every option group needs a name and at least one named choice. “At least” can&apos;t be more than
-                “at most”.
+                Every option group needs a name and at least one named choice.
               </div>
             )}
           </section>

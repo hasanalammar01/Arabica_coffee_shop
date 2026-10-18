@@ -8,7 +8,10 @@ import {
   getOrders,
   getSession,
   setOrderStatus,
+  requestPinReset,
+  resetPin,
   signIn as startSession,
+  verifyPin,
   signOut as endSession,
   type Backend,
   type FileChange,
@@ -25,6 +28,7 @@ import {
   type DraftSection,
 } from "@/lib/admin/draft";
 import { buildMenu, slugify } from "@/lib/menu-core";
+import { pinProblem } from "@/lib/admin/pin";
 import type { OrderStatus } from "@/lib/orders-core";
 import { ItemEditor, type Destination } from "./ItemEditor";
 import { MenuItems } from "./MenuItems";
@@ -97,14 +101,44 @@ export function AdminApp() {
       });
   }, [open]);
 
+  const [pinStep, setPinStep] = useState(false);
+
+  /** Opens the dashboard; nudges towards a PIN while none is set. */
+  const enter = async () => {
+    const session = await getSession();
+    await open(session);
+    if (session.orders && !session.pin) setNotice("Protect the admin: create a 4-digit sign-in PIN in Settings.");
+  };
+
   const signIn = async (username: string, password: string) => {
     setStatus("loading");
     setAuthError("");
     try {
-      await startSession(username, password);
-      await open(await getSession());
+      const { pin } = await startSession(username, password);
+      if (pin) {
+        setPinStep(true);
+        setStatus("signed-out");
+        return;
+      }
+      await enter();
     } catch (e) {
       setAuthError(errorText(e));
+      setStatus("signed-out");
+    }
+  };
+
+  const enterPin = async (pin: string) => {
+    setStatus("loading");
+    setAuthError("");
+    try {
+      await verifyPin(pin);
+      setPinStep(false);
+      await enter();
+    } catch (e) {
+      const message = errorText(e);
+      setAuthError(message);
+      // The 5 minutes for the PIN ran out: back to the password.
+      if (message.startsWith("Sign in with your password")) setPinStep(false);
       setStatus("signed-out");
     }
   };
@@ -192,6 +226,20 @@ export function AdminApp() {
         loading={status === "loading"}
         error={authError}
         onSignIn={signIn}
+        pinStep={pinStep}
+        onPin={enterPin}
+        onReset={async () => {
+          setPinStep(false);
+          setStatus("loading");
+          await enter().catch((e) => {
+            setAuthError(errorText(e));
+            setStatus("signed-out");
+          });
+        }}
+        onBack={() => {
+          setPinStep(false);
+          setAuthError("");
+        }}
       />
     );
 
@@ -271,11 +319,19 @@ function SignIn({
   loading,
   error,
   onSignIn,
+  pinStep,
+  onPin,
+  onReset,
+  onBack,
 }: {
   checking: boolean;
   loading: boolean;
   error: string;
   onSignIn: (username: string, password: string) => void;
+  pinStep: boolean;
+  onPin: (pin: string) => void;
+  onReset: () => void;
+  onBack: () => void;
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -283,6 +339,7 @@ function SignIn({
     e.preventDefault();
     if (username && password) onSignIn(username, password);
   };
+  if (pinStep) return <PinStep loading={loading} error={error} onPin={onPin} onReset={onReset} onBack={onBack} />;
   return (
     <main id="main" className="sign-in">
       <form className="sign-in-card" onSubmit={submit}>
@@ -323,6 +380,193 @@ function SignIn({
             <small>First time? The username is &ldquo;admin&rdquo; until it&apos;s changed in Settings.</small>
           </>
         )}
+      </form>
+    </main>
+  );
+}
+
+/** Step 2 of signing in: the 4-digit PIN. Sends itself once the 4th digit is typed. */
+function PinStep({
+  loading,
+  error,
+  onPin,
+  onReset,
+  onBack,
+}: {
+  loading: boolean;
+  error: string;
+  onPin: (pin: string) => void;
+  onReset: () => void;
+  onBack: () => void;
+}) {
+  const [forgot, setForgot] = useState(false);
+  const [pin, setPin] = useState("");
+  // A wrong PIN clears the field for the next try.
+  const [lastError, setLastError] = useState(error);
+  if (error !== lastError) {
+    setLastError(error);
+    if (error) setPin("");
+  }
+  if (forgot) return <ForgotPin onDone={onReset} onCancel={() => setForgot(false)} />;
+  const change = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, "").slice(0, 4);
+    setPin(digits);
+    if (digits.length === 4) onPin(digits);
+  };
+  return (
+    <main id="main" className="sign-in">
+      <form
+        className="sign-in-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (pin.length === 4) onPin(pin);
+        }}
+      >
+        <FullLogo />
+        <h1>Enter your PIN</h1>
+        <p>{loading ? "Checking…" : "Your 4-digit sign-in PIN."}</p>
+        {error && (
+          <span className="error-text" role="alert">
+            {error}
+          </span>
+        )}
+        <label className="field">
+          <span className="field-label">PIN</span>
+          <input
+            className="pin-input"
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]{4}"
+            maxLength={4}
+            autoComplete="one-time-code"
+            value={pin}
+            onChange={(e) => change(e.target.value)}
+            disabled={loading}
+            autoFocus
+          />
+        </label>
+        <button type="submit" className="button primary" disabled={loading || pin.length !== 4}>
+          {loading ? "Checking…" : "Continue"}
+        </button>
+        <button type="button" className="button ghost" onClick={() => setForgot(true)} disabled={loading}>
+          Forgot PIN?
+        </button>
+        <button type="button" className="button ghost" onClick={onBack} disabled={loading}>
+          Use a different account
+        </button>
+      </form>
+    </main>
+  );
+}
+
+/** Forgot PIN: a 6-digit code by WhatsApp, then a new PIN. Only reachable after the password. */
+function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [sentTo, setSentTo] = useState("");
+  const [code, setCode] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const digits = (v: string, n: number) => v.replace(/[^0-9]/g, "").slice(0, n);
+
+  const send = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      setSentTo((await requestPinReset()).sentTo);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const problem = pinProblem(newPin) ?? (newPin !== confirm ? "The two new PINs don't match." : null);
+    if (problem) return setError(problem);
+    setBusy(true);
+    setError("");
+    try {
+      await resetPin(code, newPin);
+      onDone();
+    } catch (err) {
+      setError(errorText(err));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <main id="main" className="sign-in">
+      <form className="sign-in-card" onSubmit={submit}>
+        <FullLogo />
+        <h1>Reset your PIN</h1>
+        <p>
+          {sentTo
+            ? `We sent a 6-digit code to the admin WhatsApp (${sentTo}). It works for 10 minutes.`
+            : "We'll send a 6-digit code to the admin WhatsApp number saved in Settings."}
+        </p>
+        {error && (
+          <span className="error-text" role="alert">
+            {error}
+          </span>
+        )}
+        {!sentTo ? (
+          <button type="button" className="button primary" onClick={send} disabled={busy}>
+            {busy ? "Sending…" : "Send the code"}
+          </button>
+        ) : (
+          <>
+            <label className="field">
+              <span className="field-label">Code from WhatsApp</span>
+              <input
+                className="pin-input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(digits(e.target.value, 6))}
+                autoFocus
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">New PIN</span>
+              <input
+                className="pin-input"
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="new-password"
+                value={newPin}
+                onChange={(e) => setNewPin(digits(e.target.value, 4))}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">Repeat the new PIN</span>
+              <input
+                className="pin-input"
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(digits(e.target.value, 4))}
+              />
+            </label>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={busy || code.length !== 6 || newPin.length !== 4 || confirm.length !== 4}
+            >
+              {busy ? "Saving…" : "Set new PIN and sign in"}
+            </button>
+            <button type="button" className="button ghost" onClick={send} disabled={busy}>
+              Send a new code
+            </button>
+          </>
+        )}
+        <button type="button" className="button ghost" onClick={onCancel} disabled={busy}>
+          Back to PIN
+        </button>
       </form>
     </main>
   );

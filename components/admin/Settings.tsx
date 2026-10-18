@@ -4,10 +4,12 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   getSettings,
   saveAccount,
+  savePin,
   saveShopSettings,
   testNotification,
   type SettingsData,
 } from "@/lib/admin/backend";
+import { pinProblem } from "@/lib/admin/pin";
 import {
   PAYMENT_KINDS,
   paymentReady,
@@ -42,18 +44,20 @@ function useShopSettings(setDirty: (d: boolean) => void, onSaved: (message: stri
     setShop((s) => (s ? { ...s, ...patch } : s));
     setLocalDirty(true);
   };
-  const save = async () => {
+  const save = async (currentPin = "") => {
     if (!shop) return;
     setBusy(true);
     setError("");
     try {
-      const saved = await saveShopSettings(shop);
+      const saved = await saveShopSettings(shop, currentPin);
       setShop(saved);
       setData((d) => (d ? { ...d, shop: saved } : d));
       setLocalDirty(false);
       onSaved("Saved. The website uses the new settings right away.");
+      return true;
     } catch (e) {
       setError(errorText(e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -65,7 +69,19 @@ function useShopSettings(setDirty: (d: boolean) => void, onSaved: (message: stri
   return { data, shop, dirty, error, setError, busy, update, save, discard };
 }
 
-function SaveBar({ busy, dirty, onSave, onDiscard }: { busy: boolean; dirty: boolean; onSave: () => void; onDiscard: () => void }) {
+function SaveBar({
+  busy,
+  dirty,
+  onSave,
+  onDiscard,
+  blocked = false,
+}: {
+  busy: boolean;
+  dirty: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+  blocked?: boolean;
+}) {
   return (
     <div className="bottom-actions">
       <span>{busy ? "Saving…" : dirty ? "Unsaved changes" : "No changes"}</span>
@@ -73,7 +89,7 @@ function SaveBar({ busy, dirty, onSave, onDiscard }: { busy: boolean; dirty: boo
         <Button variant="secondary" disabled={!dirty || busy} onClick={onDiscard}>
           Discard
         </Button>
-        <Button disabled={!dirty || busy} onClick={onSave}>
+        <Button disabled={!dirty || busy || blocked} onClick={onSave}>
           {busy ? "Saving…" : "Save"}
         </Button>
       </div>
@@ -252,7 +268,7 @@ export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
           <button type="button" className="add-row" onClick={() => s.update({ payments: [...methods, blankMethod()] })}>
             <Icon name="plus" /> Add a payment method
           </button>
-          <SaveBar busy={s.busy} dirty={s.dirty} onSave={s.save} onDiscard={s.discard} />
+          <SaveBar busy={s.busy} dirty={s.dirty} onSave={() => s.save()} onDiscard={s.discard} />
         </>
       )}
     </div>
@@ -263,6 +279,13 @@ export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
 
 export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) => void; onSaved: (m: string) => void }) {
   const s = useShopSettings(setDirty, onSaved);
+  const [pinOverride, setPinOverride] = useState<boolean | null>(null);
+  const pinSet = pinOverride ?? Boolean(s.data?.pinSet);
+  // The WhatsApp number also receives "forgot PIN" codes, so changing it asks for the PIN.
+  const [whatsappPin, setWhatsappPin] = useState("");
+  const saved = s.data?.shop.whatsapp;
+  const numberChanged =
+    pinSet && Boolean(s.shop && saved) && (s.shop!.whatsapp.phone !== saved!.phone || s.shop!.whatsapp.apiKey !== saved!.apiKey);
   const [testing, setTesting] = useState<"whatsapp" | "email" | null>(null);
   const [testResult, setTestResult] = useState("");
 
@@ -328,7 +351,8 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
               <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noreferrer">
                 callmebot.com
               </a>{" "}
-              from the phone that should get the orders, then paste the key it sends you below.
+              from the phone that should get the orders, then paste the key it sends you below. This number
+              also receives the code if the sign-in PIN is forgotten.
             </SettingRow>
             <div className="form-grid">
               <Field label="Phone number" hint="With country code, e.g. +961 71 123 456">
@@ -346,6 +370,11 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
                   autoComplete="off"
                 />
               </Field>
+              {numberChanged && (
+                <Field label="Your PIN" required hint="Needed to change the number or key, which receive PIN reset codes.">
+                  <PinInput value={whatsappPin} onChange={setWhatsappPin} autoComplete="off" />
+                </Field>
+              )}
             </div>
             <Button variant="secondary" disabled={s.dirty || testing !== null} onClick={() => test("whatsapp")}>
               {testing === "whatsapp" ? "Sending…" : "Send a test WhatsApp"}
@@ -384,17 +413,52 @@ export function SettingsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
             )}
           </section>
 
-          <AccountSection data={s.data} onSaved={onSaved} />
-          <SaveBar busy={s.busy} dirty={s.dirty} onSave={s.save} onDiscard={s.discard} />
+          <AccountSection data={s.data} pinSet={pinSet} onSaved={onSaved} />
+          <PinSection
+            pinSet={pinSet}
+            onSaved={(m) => {
+              setPinOverride(true);
+              onSaved(m);
+            }}
+          />
+          <SaveBar
+            busy={s.busy}
+            dirty={s.dirty}
+            blocked={numberChanged && whatsappPin.length !== 4}
+            onSave={async () => {
+              if (await s.save(numberChanged ? whatsappPin : "")) setWhatsappPin("");
+            }}
+            onDiscard={() => {
+              s.discard();
+              setWhatsappPin("");
+            }}
+          />
         </>
       )}
     </div>
   );
 }
 
-function AccountSection({ data, onSaved }: { data: SettingsData; onSaved: (m: string) => void }) {
+/** A 4-digit PIN box: digits only, number keypad on phones. */
+function PinInput({ value, onChange, autoComplete }: { value: string; onChange: (v: string) => void; autoComplete: string }) {
+  return (
+    <input
+      className="pin-input small"
+      type="password"
+      inputMode="numeric"
+      pattern="[0-9]{4}"
+      maxLength={4}
+      autoComplete={autoComplete}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+    />
+  );
+}
+
+function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet: boolean; onSaved: (m: string) => void }) {
   const [username, setUsername] = useState(data.username);
   const [currentPassword, setCurrent] = useState("");
+  const [currentPin, setCurrentPin] = useState("");
   const [newPassword, setNew] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -406,8 +470,9 @@ function AccountSection({ data, onSaved }: { data: SettingsData; onSaved: (m: st
     setBusy(true);
     setError("");
     try {
-      await saveAccount({ currentPassword, username, newPassword });
+      await saveAccount({ currentPassword, currentPin, username, newPassword });
       setCurrent("");
+      setCurrentPin("");
       setNew("");
       setConfirm("");
       onSaved(newPassword ? "Login updated. Other devices are signed out." : "Username updated.");
@@ -445,6 +510,11 @@ function AccountSection({ data, onSaved }: { data: SettingsData; onSaved: (m: st
             autoComplete="current-password"
           />
         </Field>
+        {pinSet && (
+          <Field label="PIN" required>
+            <PinInput value={currentPin} onChange={setCurrentPin} autoComplete="off" />
+          </Field>
+        )}
         <Field label="New password" hint="At least 10 characters, not containing the username. Leave empty to keep the current one.">
           <input type="password" value={newPassword} onChange={(e) => setNew(e.target.value)} autoComplete="new-password" />
         </Field>
@@ -452,8 +522,81 @@ function AccountSection({ data, onSaved }: { data: SettingsData; onSaved: (m: st
           <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
         </Field>
       </div>
-      <button type="submit" className="button primary" disabled={busy || !currentPassword}>
+      <button type="submit" className="button primary" disabled={busy || !currentPassword || (pinSet && currentPin.length !== 4)}>
         {busy ? "Updating…" : "Update login"}
+      </button>
+    </form>
+  );
+}
+
+function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string) => void }) {
+  const [currentPassword, setCurrent] = useState("");
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const problem = pinProblem(newPin) ?? (newPin !== confirm ? "The two new PINs don't match." : null);
+    if (problem) return setError(problem);
+    setBusy(true);
+    setError("");
+    try {
+      await savePin({ currentPassword, currentPin, newPin });
+      setCurrent("");
+      setCurrentPin("");
+      setNewPin("");
+      setConfirm("");
+      onSaved(pinSet ? "PIN changed. Other devices are signed out." : "PIN created. It's now asked for at every sign-in.");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="form-section" onSubmit={submit}>
+      <div className="section-title">
+        <h2>Sign-in PIN</h2>
+        <p>
+          {pinSet
+            ? "After the password, the admin asks for this 4-digit PIN. It's also needed to change the login."
+            : "Add a 4-digit PIN as a second step after the password. Recommended: it keeps the admin safe even if the password leaks."}
+        </p>
+      </div>
+      {!pinSet && <div className="info-banner">No PIN yet. Anyone with the password can open the admin.</div>}
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="form-grid">
+        <Field label="Current password" required>
+          <input type="password" value={currentPassword} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        </Field>
+        {pinSet ? (
+          <Field label="Current PIN" required>
+            <PinInput value={currentPin} onChange={setCurrentPin} autoComplete="off" />
+          </Field>
+        ) : (
+          <span aria-hidden />
+        )}
+        <Field label={pinSet ? "New PIN" : "PIN"} required hint="4 digits. Not 0000, 1234 or similar.">
+          <PinInput value={newPin} onChange={setNewPin} autoComplete="new-password" />
+        </Field>
+        <Field label="Repeat the PIN" required>
+          <PinInput value={confirm} onChange={setConfirm} autoComplete="new-password" />
+        </Field>
+      </div>
+      <button
+        type="submit"
+        className="button primary"
+        disabled={busy || !currentPassword || (pinSet && currentPin.length !== 4) || newPin.length !== 4 || confirm.length !== 4}
+      >
+        {busy ? "Saving…" : pinSet ? "Change PIN" : "Create PIN"}
       </button>
     </form>
   );

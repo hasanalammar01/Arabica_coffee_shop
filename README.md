@@ -13,7 +13,7 @@ npm run lint && npm run typecheck && npm test
 
 Staff manage the menu at `https://your-domain/admin`, a dashboard built from the approved Figma design ("Staff dashboard design"):
 
-- **Menu items:** search, add, edit, duplicate, move up/down and delete items. Each item has a name, a price in L.L (or prices by size), and optional description, photo, flavours/choices, tags and an "add-on" switch, with a live preview.
+- **Menu items:** search, add, edit, duplicate, move up/down and delete items. Each item has a name, a price in L.L (or prices by size), and optional description, photo, flavours/choices, tags and an "add-on" switch, with a live preview. **Order options** are choice groups such as Nestlé (pick one, optional: With / Without) or Presses (pick one, required: 1 · 1½ · 2), with optional extra prices; guests see them as bullet lists in the item's details and choose when ordering. "Copy choices from another item" reuses a set on other drinks.
 - **Sections:** rename, reorder, add and delete sections. A section with items can't be deleted, and a new section stays hidden on the site until it has an item.
 - **Shop info:** address, Google Maps link, phone, WhatsApp, Instagram, email and opening hours (`data/site.json`).
 
@@ -44,6 +44,16 @@ Staff sign in with a username and password (username `admin` and `ADMIN_PASSWORD
 4. Redeploy (Vercel → Deployments → ⋯ → Redeploy) so the new variables take effect.
 
 The repository and branch are set in `lib/admin/store.ts` (`REPO`, `BRANCH`).
+
+### Sign-in PIN
+
+Once a 4-digit PIN is created in **Settings → Sign-in PIN**, signing in takes the password and then the PIN. Changing the login, the PIN or the WhatsApp number needs the PIN too, and wrong PINs count towards the same lockout as wrong passwords (5 tries, then 15 minutes).
+
+**Forgot PIN?** on the PIN screen (only after the correct password) sends a 6-digit code to the admin WhatsApp number from Settings (CallMeBot), valid 10 minutes and once; at most 3 codes an hour. If WhatsApp isn't set up, remove the PIN from the database instead (Neon → SQL Editor, on the `main` branch); the admin then creates a new one:
+
+```sql
+update settings set data = data - 'pinHash' - 'pinReset' where id = 1;
+```
 
 ### Editing the file directly
 

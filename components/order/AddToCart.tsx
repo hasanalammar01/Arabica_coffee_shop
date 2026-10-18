@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { currency, type MenuItem } from "@/data/menu";
+import { currency, type MenuItem, type Modifier } from "@/data/menu";
 import { formatAmount } from "@/lib/format";
 import { pick, t, type Lang } from "@/lib/i18n";
-import { MAX_QTY, needsChoices, priceLine, type CartLine } from "@/lib/orders-core";
+import { chooseHint, MAX_QTY, needsChoices, priceLine, type CartLine } from "@/lib/orders-core";
 import { cart, type OrderingConfig } from "./cart";
 
 /** The round + button next to an item. Items with sizes or choices open a small sheet first. */
@@ -83,10 +83,11 @@ function ChoiceSheet({
   const priced = priceLine(new Map([[item.id, item]]), line);
   const label = lang === "ar" ? currency.labelAr : currency.label;
 
-  const toggle = (groupId: string, key: string, single: boolean) =>
+  // Pick-one groups swap the choice; an optional one (e.g. Nestlé) can also be un-ticked.
+  const toggle = (g: Modifier, key: string) =>
     setMods((m) => {
-      const others = m.filter((k) => !k.startsWith(`${groupId}/`));
-      if (single) return [...others, key];
+      const others = m.filter((k) => !k.startsWith(`${g.id}/`));
+      if (g.max === 1) return m.includes(key) && g.min === 0 ? others : [...others, key];
       return m.includes(key) ? m.filter((k) => k !== key) : [...m, key];
     });
 
@@ -148,12 +149,14 @@ function ChoiceSheet({
 
         {item.modifiers?.map((g) => {
           const single = g.max === 1;
+          // A required pick-one is a radio group; optional ones use tick boxes so they can be cleared.
+          const radio = single && g.min >= 1;
           const picked = mods.filter((k) => k.startsWith(`${g.id}/`)).length;
           return (
             <fieldset key={g.id}>
               <legend className={legend}>
                 {pick(lang, g.name, g.nameAr)}{" "}
-                <span className="text-sm font-normal text-muted">· {single ? d.pickOne : d.upTo(g.max)}</span>
+                <span className="text-sm font-normal text-muted">· {chooseHint(g, d)}</span>
               </legend>
               <div className="grid gap-2">
                 {g.choices.map((c) => {
@@ -162,11 +165,11 @@ function ChoiceSheet({
                   return (
                     <label key={key} className={choice}>
                       <input
-                        type={single ? "radio" : "checkbox"}
+                        type={radio ? "radio" : "checkbox"}
                         name={g.id}
                         checked={on}
                         disabled={!single && !on && picked >= g.max}
-                        onChange={() => toggle(g.id, key, single)}
+                        onChange={() => toggle(g, key)}
                         className="accent-espresso"
                       />
                       <span className="flex-1">{pick(lang, c.name, c.nameAr)}</span>

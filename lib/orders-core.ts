@@ -3,7 +3,7 @@
  * free of database code so it can be unit-tested. The server always re-prices a cart from
  * the menu; prices sent by the browser are never trusted.
  */
-import type { MenuCategory, MenuItem } from "../data/menu.ts";
+import type { MenuCategory, MenuItem, Modifier } from "../data/menu.ts";
 
 export const ORDER_STATUSES = ["new", "accepted", "done", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -57,12 +57,23 @@ export type ShopSettings = {
   email: { enabled: boolean; address: string };
 };
 
-/** Stored settings. An empty passwordHash means "use ADMIN_PASSWORD from Vercel". */
-export type Settings = ShopSettings & { username: string; passwordHash: string };
+/**
+ * Stored settings. An empty passwordHash means "use ADMIN_PASSWORD from Vercel"; an empty
+ * pinHash means no PIN step at sign-in yet.
+ */
+export type Settings = ShopSettings & {
+  username: string;
+  passwordHash: string;
+  pinHash: string;
+  /** A pending "forgot PIN" code: "<hash>|<expires ms>", or "". */
+  pinReset: string;
+};
 
 export const DEFAULT_SETTINGS: Settings = {
   username: "admin",
   passwordHash: "",
+  pinHash: "",
+  pinReset: "",
   ordersEnabled: false,
   payments: [
     { id: "cash", kind: "cash", name: "Cash on delivery", nameAr: "الدفع نقداً عند الاستلام", enabled: true },
@@ -118,6 +129,8 @@ export const withDefaults = (stored: unknown): Settings => {
   return {
     username: str(s.username, 40) || DEFAULT_SETTINGS.username,
     passwordHash: str(s.passwordHash, 300),
+    pinHash: str(s.pinHash, 300),
+    pinReset: str(s.pinReset, 300),
     ...cleanShopSettings({ ...DEFAULT_SETTINGS, ...s }),
   };
 };
@@ -142,6 +155,12 @@ export type OrderLine = {
 
 export const MAX_QTY = 20;
 export const MAX_LINES = 30;
+
+/** How guests choose from a group, for headings: "Pick one", "Optional", "Up to 2", "Pick any". */
+export const chooseHint = (
+  g: Pick<Modifier, "min" | "max" | "choices">,
+  d: { pickOne: string; optional: string; pickAny: string; upTo: (n: number) => string },
+) => (g.max === 1 ? (g.min >= 1 ? d.pickOne : d.optional) : g.max < g.choices.length ? d.upTo(g.max) : d.pickAny);
 
 /** Does this item need a choice before it can go in the cart? */
 export const needsChoices = (item: MenuItem) =>

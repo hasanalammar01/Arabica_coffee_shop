@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildMenu } from "./menu-core.ts";
 import {
+  chooseHint,
   cleanShopSettings,
   DEFAULT_SETTINGS,
   menuItems,
@@ -149,4 +150,13 @@ test("statistics: today, this week from Monday, this month, last 30 days", () =>
   assert.equal(s.last30.length, 30);
   assert.equal(s.last30[0].day, "2026-09-18");
   assert.equal(s.last30.at(-1)!.orders, 4);
+});
+
+test("choice headings say how to choose", () => {
+  const d = { pickOne: "Pick one", optional: "Optional", pickAny: "Pick any", upTo: (n: number) => `Up to ${n}` };
+  const three = [{}, {}, {}] as never[];
+  assert.equal(chooseHint({ min: 1, max: 1, choices: three }, d), "Pick one"); // Presses: 1 · 1½ · 2
+  assert.equal(chooseHint({ min: 0, max: 1, choices: three }, d), "Optional"); // Nestlé
+  assert.equal(chooseHint({ min: 0, max: 2, choices: three }, d), "Up to 2");
+  assert.equal(chooseHint({ min: 0, max: 3, choices: three }, d), "Pick any");
 });

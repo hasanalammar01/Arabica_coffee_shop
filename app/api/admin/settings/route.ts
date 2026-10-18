@@ -5,10 +5,12 @@ import {
   isSignedIn,
   LOGIN_TRIES,
   MIN_PASSWORD,
+  pinMatches,
   sameOrigin,
   sessionCookie,
 } from "@/lib/admin/auth";
 import { clientKey, dbConfigured, getSettings, limited, recordHit, saveSettings } from "@/lib/db";
+import { pinProblem } from "@/lib/admin/pin";
 import { readJson } from "@/lib/http";
 import { sendEmail, sendWhatsApp } from "@/lib/notify";
 import { cleanShopSettings } from "@/lib/orders-core";
@@ -28,9 +30,16 @@ async function guard(req: NextRequest, write: boolean) {
 export async function GET(req: NextRequest) {
   const denied = await guard(req, false);
   if (denied) return denied;
-  const { username, passwordHash, ...shop } = await getSettings();
+  const settings = await getSettings();
   return NextResponse.json(
-    { shop, username, passwordInDatabase: Boolean(passwordHash), emailReady: Boolean(process.env.RESEND_API_KEY) },
+    {
+      // An allow-list: login secrets (password, PIN, reset code) never leave the server.
+      shop: cleanShopSettings(settings),
+      username: settings.username,
+      passwordInDatabase: Boolean(settings.passwordHash),
+      pinSet: Boolean(settings.pinHash),
+      emailReady: Boolean(process.env.RESEND_API_KEY),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -43,13 +52,31 @@ export async function PUT(req: NextRequest) {
   // A broken or oversized body must never be saved as "empty settings".
   if (!body || typeof body !== "object") return text("That change can't be saved.", 400);
   const shop = cleanShopSettings(body);
+
+  // The WhatsApp number receives "forgot PIN" codes, so changing it needs the PIN: otherwise a
+  // stolen password alone could point the codes at another phone.
+  const current = await getSettings();
+  const numberChanged = shop.whatsapp.phone !== current.whatsapp.phone || shop.whatsapp.apiKey !== current.whatsapp.apiKey;
+  if (current.pinHash && numberChanged) {
+    const key = clientKey(req.headers, "login");
+    if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong attempts. Wait 15 minutes, then try again.", 429);
+    const pin = (body as { currentPin?: unknown }).currentPin;
+    if (typeof pin !== "string" || !(await pinMatches(pin))) {
+      await recordHit(key);
+      return text("Enter your PIN to change the WhatsApp number or key.", 401);
+    }
+  }
+
   await saveSettings(shop);
   return NextResponse.json({ shop });
 }
 
 const USERNAME = /^[a-z0-9._-]{3,40}$/i;
 
-/** { action: "account", currentPassword, username, newPassword } or { action: "test", channel }. */
+/**
+ * { action: "test", channel }, { action: "account", currentPassword, currentPin, username, newPassword }
+ * or { action: "pin", currentPassword, currentPin, newPin }.
+ */
 export async function POST(req: NextRequest) {
   const denied = await guard(req, true);
   if (denied) return denied;
@@ -68,16 +95,35 @@ export async function POST(req: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
-  if (body.action === "account") {
-    const { currentPassword, username, newPassword } = body;
-    // Shares the sign-in limit, so a stolen session can't be used to guess the password.
-    const key = clientKey(req.headers, "login");
-    if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong passwords. Wait 15 minutes, then try again.", 429);
-    if (typeof currentPassword !== "string" || !(await credentialsMatch(settings.username, currentPassword))) {
-      await recordHit(key);
-      await new Promise((r) => setTimeout(r, 1000));
-      return text("The current password is wrong.", 401);
-    }
+  if (body.action !== "account" && body.action !== "pin") return text("Unknown action.", 400);
+
+  // Both need the current password, and the current PIN once one exists. This shares the
+  // sign-in limit, so a stolen session can't be used to guess either.
+  const key = clientKey(req.headers, "login");
+  if (await limited(key, LOGIN_TRIES, 15)) return text("Too many wrong attempts. Wait 15 minutes, then try again.", 429);
+  const refuse = async (message: string) => {
+    await recordHit(key);
+    await new Promise((r) => setTimeout(r, 1000));
+    return text(message, 401);
+  };
+  if (typeof body.currentPassword !== "string" || !(await credentialsMatch(settings.username, body.currentPassword)))
+    return refuse("The current password is wrong.");
+  if (settings.pinHash && (typeof body.currentPin !== "string" || !(await pinMatches(body.currentPin))))
+    return refuse("The PIN is wrong.");
+
+  if (body.action === "pin") {
+    const newPin = typeof body.newPin === "string" ? body.newPin : "";
+    const problem = pinProblem(newPin);
+    if (problem) return text(problem, 400);
+    await saveSettings({ pinHash: hashPassword(newPin) });
+    // A new PIN signs every other session out; keep this one signed in.
+    const res = new NextResponse(null, { status: 204 });
+    res.cookies.set(await sessionCookie());
+    return res;
+  }
+
+  {
+    const { username, newPassword } = body;
     if (typeof username !== "string" || !USERNAME.test(username.trim()))
       return text("The username needs 3 to 40 letters, numbers, dots, dashes or underscores.", 400);
     if (typeof newPassword !== "string" || (newPassword && newPassword.length < MIN_PASSWORD))
@@ -93,6 +139,4 @@ export async function POST(req: NextRequest) {
     res.cookies.set(await sessionCookie());
     return res;
   }
-
-  return text("Unknown action.", 400);
 }
