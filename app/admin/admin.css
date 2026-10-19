@@ -261,6 +261,150 @@ html.admin-root body {
   & .mobile-header {
     display: none;
   }
+  & .topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 48px;
+    border-bottom: 1px solid var(--line);
+  }
+  & .top-search {
+    position: relative;
+    flex: 1;
+    max-width: 520px;
+    margin-right: auto;
+  }
+  & .top-search .search {
+    max-width: none;
+  }
+  & .search-results {
+    position: absolute;
+    z-index: 25;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    padding: 6px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(43, 29, 20, 0.14);
+  }
+  & .search-results button {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  & .search-results button:hover,
+  & .search-results button:focus-visible {
+    background: var(--soft);
+  }
+  & .search-results small {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  & .search-results p {
+    margin: 0;
+    padding: 10px;
+    color: var(--muted);
+  }
+  & .icon-button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  & .icon-button:hover,
+  & .icon-button.active {
+    background: var(--soft);
+    border-color: var(--crema);
+  }
+  & .icon-button .count-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    padding: 0 5px;
+    font-size: 11px;
+  }
+  & .notifications {
+    /* A popover sits in the top layer; pin it under the bell. */
+    position: fixed;
+    inset: 70px 24px auto auto;
+    width: min(360px, calc(100vw - 32px));
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: white;
+    color: var(--ink);
+    box-shadow: 0 16px 40px rgba(43, 29, 20, 0.18);
+  }
+  & .notifications h2 {
+    margin: 2px 4px 10px;
+    font-size: 15px;
+  }
+  & .notifications ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  & .notifications li button {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+    padding: 10px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  & .notifications li button:hover {
+    background: var(--soft);
+  }
+  & .notifications li span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  & .notifications li b {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  & .notifications small,
+  & .notifications p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  & .notifications p {
+    margin: 4px 4px 12px;
+  }
+  & .notifications .see-all {
+    width: 100%;
+    min-height: 40px;
+    margin-top: 6px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper);
+    font-weight: 600;
+    cursor: pointer;
+  }
   & .page {
     width: min(1320px, 100%);
     margin: 0 auto;
@@ -1481,7 +1625,8 @@ html.admin-root body {
     & .app-main {
       margin-left: 220px;
     }
-    & .page {
+    & .page,
+    & .topbar {
       padding-left: 30px;
       padding-right: 30px;
     }
@@ -1565,6 +1710,15 @@ html.admin-root body {
     }
     & .page {
       padding: 26px 16px 96px;
+    }
+    & .topbar {
+      padding: 12px 16px;
+    }
+    & .top-search .search {
+      min-width: 0;
+    }
+    & .notifications {
+      inset: 128px 16px auto auto;
     }
     & .page-header {
       align-items: flex-start;

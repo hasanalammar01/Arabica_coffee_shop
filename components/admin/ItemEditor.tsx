@@ -563,26 +563,30 @@ export function ItemEditor({ editing, sections, onBack, onPublish, onDelete, set
 
           <section className="form-section">
             <div className="section-title">
-              <h2>Ingredients and allergens</h2>
+              <h2>Allergens</h2>
               <p>Guests see these when they tap the item. Leave them empty until the café confirms them.</p>
             </div>
-            <Field label="Ingredients" hint="Optional">
-              <textarea
-                value={item.ingredients}
-                onChange={(e) => update({ ingredients: e.target.value })}
-                maxLength={300}
-                placeholder="e.g. Espresso, milk, caramel syrup"
-              />
-            </Field>
-            <Field label="Ingredients in Arabic" hint="Optional">
-              <textarea
-                dir="rtl"
-                lang="ar"
-                value={item.ingredientsAr}
-                onChange={(e) => update({ ingredientsAr: e.target.value })}
-                maxLength={300}
-              />
-            </Field>
+            {/* "What's in it" replaces Ingredients; shown only so older items can still be edited or cleared. */}
+            {(original.ingredients || original.ingredientsAr) && (
+              <>
+                <Field label="Ingredients" hint="Older field · better to move this into What's in it and clear it">
+                  <textarea
+                    value={item.ingredients}
+                    onChange={(e) => update({ ingredients: e.target.value })}
+                    maxLength={300}
+                  />
+                </Field>
+                <Field label="Ingredients in Arabic" hint="Older field">
+                  <textarea
+                    dir="rtl"
+                    lang="ar"
+                    value={item.ingredientsAr}
+                    onChange={(e) => update({ ingredientsAr: e.target.value })}
+                    maxLength={300}
+                  />
+                </Field>
+              </>
+            )}
             <Field label="Contains (allergens)">
               <div className="tag-toggles">
                 {ALLERGENS.map((a) => (

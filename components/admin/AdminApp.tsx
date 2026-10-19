@@ -28,6 +28,7 @@ import {
   type DraftItem,
   type DraftSection,
 } from "@/lib/admin/draft";
+import { currencyLabel, formatAmount } from "@/lib/format";
 import { buildMenu, slugify } from "@/lib/menu-core";
 import { PAGES, type Page } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
@@ -288,6 +289,8 @@ export function AdminApp() {
     setEditing(e);
     setScreen("editor");
   };
+  // From the top search: may leave another screen, so ask about unpublished changes first.
+  const openItem = (e: Editing) => go("editor") && setEditing(e);
 
   return (
     <AppShell
@@ -298,6 +301,9 @@ export function AdminApp() {
       isAdmin={isAdmin}
       onSignOut={signOut}
       newOrders={orders.data?.newOrders ?? 0}
+      orders={orders.data?.orders ?? []}
+      sections={sections}
+      onOpenItem={openItem}
     >
       {notice && <Toast message={notice} onClose={() => setNotice("")} />}
       {screen === "items" && (
@@ -622,6 +628,9 @@ function AppShell({
   user,
   onSignOut,
   newOrders,
+  orders,
+  sections,
+  onOpenItem,
   pages,
   isAdmin,
   children,
@@ -633,6 +642,9 @@ function AppShell({
   isAdmin: boolean;
   onSignOut: () => void;
   newOrders: number;
+  orders: OrdersOverview["orders"];
+  sections: DraftSection[];
+  onOpenItem: (e: Editing) => void;
   children: ReactNode;
 }) {
   const [mobileNav, setMobileNav] = useState(false);
@@ -655,17 +667,14 @@ function AppShell({
     },
     {
       group: "Admin",
-      items: [
-        { id: "settings", label: "Settings", icon: "settings" },
-        ...(isAdmin ? [{ id: "activity" as const, label: "Activity", icon: "clock" as const }] : []),
-      ],
+      items: isAdmin ? [{ id: "activity", label: "Activity", icon: "clock" }] : [],
     },
   ];
   const nav = allNav
-    // Only the pages this user may open (Settings always: staff find "My account" there).
+    // Only the pages this user may open. Settings is the gear in the top bar, always there.
     .map((g) => ({
       ...g,
-      items: g.items.filter((i) => i.id === "settings" || i.id === "activity" || pages.includes(i.id as Page)),
+      items: g.items.filter((i) => i.id === "activity" || pages.includes(i.id as Page)),
     }))
     .filter((g) => g.items.length > 0);
   const active = screen === "editor" ? "items" : screen;
@@ -746,13 +755,176 @@ function AppShell({
           <Logo />
           <span aria-hidden="true" />
         </header>
+        <div className="topbar">
+          <TopSearch
+            sections={pages.includes("items") ? sections : []}
+            pages={[...nav.flatMap((g) => g.items), { id: "settings", label: "Settings", icon: "settings" }]}
+            go={go}
+            onOpenItem={onOpenItem}
+          />
+          {pages.includes("orders") && <Notifications orders={orders} count={newOrders} go={go} />}
+          <button
+            type="button"
+            className={`icon-button ${active === "settings" ? "active" : ""}`}
+            aria-label="Settings"
+            aria-current={active === "settings" ? "page" : undefined}
+            title="Settings"
+            onClick={() => go("settings")}
+          >
+            <Icon name="settings" />
+          </button>
+        </div>
         {children}
       </main>
     </div>
   );
 }
 
-const ORDER_SCREENS: Screen[] = ["orders", "stats", "payments", "settings", "activity"];
+type NavItem = { id: Screen; label: string; icon: IconName };
+
+/** Finds menu items (English or Arabic name) and dashboard pages; Enter opens the first match. */
+function TopSearch({
+  sections,
+  pages,
+  go,
+  onOpenItem,
+}: {
+  sections: DraftSection[];
+  pages: NavItem[];
+  go: (to: Screen) => boolean;
+  onOpenItem: (e: Editing) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const q = query.trim().toLowerCase();
+  const results = q
+    ? [
+        ...pages
+          .filter((p) => p.label.toLowerCase().includes(q))
+          .map((p) => ({ key: `page-${p.id}`, icon: p.icon, label: p.label, detail: "Page", run: () => go(p.id) })),
+        ...sections.flatMap((s) =>
+          s.items
+            .filter((i) => i.name.toLowerCase().includes(q) || i.nameAr.includes(q))
+            .map((i) => ({
+              key: i.key,
+              icon: "menu" as const,
+              label: i.name || i.nameAr,
+              detail: s.name,
+              run: () => onOpenItem({ item: i, sectionKey: s.key, isNew: false }),
+            })),
+        ),
+      ].slice(0, 8)
+    : [];
+  const choose = (r: (typeof results)[number]) => {
+    r.run();
+    setQuery("");
+    setOpen(false);
+  };
+  return (
+    <div
+      className="top-search"
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}
+    >
+      <label className="search">
+        <Icon name="search" />
+        <input
+          type="search"
+          value={query}
+          placeholder="Search menu items and pages"
+          aria-label="Search menu items and pages"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && results[0]) choose(results[0]);
+            if (e.key === "Escape") setOpen(false);
+          }}
+        />
+      </label>
+      {open && q && (
+        <div className="search-results">
+          {results.length ? (
+            results.map((r) => (
+              <button type="button" key={r.key} onClick={() => choose(r)}>
+                <Icon name={r.icon} size={18} />
+                <span>{r.label}</span>
+                <small>{r.detail}</small>
+              </button>
+            ))
+          ) : (
+            <p>Nothing matches &lsquo;{query.trim()}&rsquo;.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ago = (iso: string) => {
+  const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
+  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
+};
+
+/** The bell: new orders waiting for staff, newest first. */
+function Notifications({
+  orders,
+  count,
+  go,
+}: {
+  orders: OrdersOverview["orders"];
+  count: number;
+  go: (to: Screen) => boolean;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+  const fresh = orders.filter((o) => o.status === "new").slice(0, 6);
+  const openOrders = () => go("orders") && panel.current?.hidePopover();
+  return (
+    <>
+      <button
+        type="button"
+        className="icon-button"
+        popoverTarget="notifications"
+        aria-label={count ? `Notifications: ${count} new order${count === 1 ? "" : "s"}` : "Notifications"}
+        title="Notifications"
+      >
+        <Icon name="bell" />
+        {count > 0 && <b className="count-badge">{count}</b>}
+      </button>
+      <div id="notifications" popover="auto" ref={panel} className="notifications">
+        <h2>Notifications</h2>
+        {fresh.length ? (
+          <ul>
+            {fresh.map((o) => (
+              <li key={o.id}>
+                <button type="button" onClick={openOrders}>
+                  <Icon name="bag" size={18} />
+                  <span>
+                    <b>
+                      New order #{o.id} · {o.name}
+                    </b>
+                    <small>
+                      {formatAmount(o.total)} {currencyLabel} · {o.fulfilment === "pickup" ? "Pickup" : "Delivery"} ·{" "}
+                      {ago(o.createdAt)}
+                    </small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No new orders right now.</p>
+        )}
+        <button type="button" className="see-all" onClick={openOrders}>
+          Open orders
+        </button>
+      </div>
+    </>
+  );
+}
+
+const ORDER_SCREENS: Screen[] =["orders", "stats", "payments", "settings", "activity"];
 const POLL_MS = 15_000;
 
 /** A short chime for a new order (no audio file needed). Browsers allow it once staff have clicked the page. */

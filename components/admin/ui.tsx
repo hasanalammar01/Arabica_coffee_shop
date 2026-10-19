@@ -34,7 +34,8 @@ export type IconName =
   | "bag"
   | "chart"
   | "card"
-  | "settings";
+  | "settings"
+  | "bell";
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -118,6 +119,12 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       <>
         <circle cx="12" cy="12" r="3" />
         <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" />
+        <path d="M10 20.5a2 2 0 0 0 4 0" />
       </>
     ),
   };
