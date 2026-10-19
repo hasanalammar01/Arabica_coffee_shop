@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listActivity, type ActivityEntry } from "@/lib/admin/backend";
+import { useAdminLanguage } from "./Language";
 import { Button, ErrorBanner, PageHeader } from "./ui";
 
 // Failed sign-ins and wrong PINs or codes stand out.
@@ -9,9 +10,10 @@ const isWarning = (a: ActivityEntry) => /^(Wrong|Sign-in with an unknown)/.test(
 
 /** Super admin only: everything done in the admin, newest first (kept 90 days). */
 export function ActivityScreen({ timeZone }: { timeZone: string }) {
+  const { locale, t } = useAdminLanguage();
   const when = useMemo(
     () =>
-      new Intl.DateTimeFormat("en-GB", {
+      new Intl.DateTimeFormat(locale, {
         timeZone,
         weekday: "short",
         day: "numeric",
@@ -19,7 +21,7 @@ export function ActivityScreen({ timeZone }: { timeZone: string }) {
         hour: "2-digit",
         minute: "2-digit",
       }),
-    [timeZone],
+    [locale, timeZone],
   );
   const [entries, setEntries] = useState<ActivityEntry[] | null>(null);
   const [people, setPeople] = useState<string[]>([]);
@@ -49,20 +51,23 @@ export function ActivityScreen({ timeZone }: { timeZone: string }) {
   return (
     <div className="page narrow-page">
       <PageHeader
-        eyebrow="Admin"
-        title="Activity"
-        description="Everything done in the admin: sign-ins, menu and shop changes, orders, settings and staff accounts. Kept 90 days."
+        eyebrow={t("Admin", "الإدارة")}
+        title={t("Activity", "النشاط")}
+        description={t(
+          "Everything done in the admin: sign-ins, menu and shop changes, orders, settings and staff accounts. Kept 90 days.",
+          "كل ما يتم في لوحة الإدارة: تسجيل الدخول وتغييرات القائمة والمقهى والطلبات والإعدادات وحسابات الموظفين. يُحتفظ بالسجل لمدة 90 يوماً.",
+        )}
         actions={
           <Button variant="secondary" onClick={load}>
-            Refresh
+            {t("Refresh", "تحديث")}
           </Button>
         }
       />
       {error && <ErrorBanner message={error} onClose={() => setError("")} />}
       <label className="field activity-filter">
-        <span className="field-label">Show</span>
+        <span className="field-label">{t("Show", "عرض")}</span>
         <select value={actor} onChange={(e) => setActor(e.target.value)}>
-          <option value="">Everyone</option>
+          <option value="">{t("Everyone", "الجميع")}</option>
           {people.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -70,15 +75,17 @@ export function ActivityScreen({ timeZone }: { timeZone: string }) {
           ))}
         </select>
       </label>
-      {!entries && !error && <p className="muted-text">Loading…</p>}
-      {entries?.length === 0 && <p className="muted-text">Nothing recorded yet.</p>}
+      {!entries && !error && <p className="muted-text">{t("Loading…", "جارٍ التحميل…")}</p>}
+      {entries?.length === 0 && (
+        <p className="muted-text">{t("Nothing recorded yet.", "لم يُسجّل أي نشاط بعد.")}</p>
+      )}
       {entries && entries.length > 0 && (
         <ol className="activity-list panel">
           {entries.map((e) => (
             <li key={e.id} className={isWarning(e) ? "warning" : ""}>
               <time dateTime={e.at}>{when.format(new Date(e.at))}</time>
-              <b>{e.actor}</b>
-              <span>{e.action}</span>
+              <b dir="ltr">{e.actor}</b>
+              <span dir="auto">{e.action}</span>
             </li>
           ))}
         </ol>

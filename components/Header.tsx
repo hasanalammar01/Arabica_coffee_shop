@@ -24,7 +24,6 @@ export function Header({ lang, d }: { lang: Lang; d: Pick<Dict, "nav" | "otherLa
         aria-label={`${d.brand}, ${d.nav.home}`}
       >
         <Logo variant="mark" className="h-7 w-auto" />
-        <span className="hidden font-display text-lg text-ink min-[440px]:inline">{lang === "ar" ? "أرابيكا" : "Arabica"}</span>
       </Link>
       <nav aria-label={d.nav.main}>
         <ul className="flex items-center text-[0.8125rem] min-[440px]:text-[0.95rem] sm:gap-1">

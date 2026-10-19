@@ -68,11 +68,17 @@ html.admin-root body {
 
   /* Sign in */
   & .sign-in {
+    position: relative;
     min-height: 100vh;
     display: grid;
     place-items: center;
     padding: 24px;
     background: var(--paper);
+  }
+  & .sign-in-language {
+    position: absolute;
+    inset-block-start: 18px;
+    inset-inline-end: 18px;
   }
   & .sign-in-card {
     width: min(100%, 420px);
@@ -120,7 +126,8 @@ html.admin-root body {
   & .sidebar {
     position: fixed;
     z-index: 30;
-    inset: 0 auto 0 0;
+    inset-block: 0;
+    inset-inline-start: 0;
     width: 248px;
     background: var(--brown);
     color: white;
@@ -188,7 +195,7 @@ html.admin-root body {
     gap: 13px;
     padding: 0 13px;
     cursor: pointer;
-    text-align: left;
+    text-align: start;
     font-size: 14px;
     text-decoration: none;
   }
@@ -201,7 +208,7 @@ html.admin-root body {
   & .sidebar nav button.active::before {
     content: "";
     position: absolute;
-    left: 0;
+    inset-inline-start: 0;
     width: 3px;
     height: 24px;
     border-radius: 3px;
@@ -248,7 +255,7 @@ html.admin-root body {
   }
   & .sign-out {
     min-height: 44px;
-    margin-left: 48px;
+    margin-inline-start: 48px;
     border: 0;
     background: none;
     color: #d8c7b2;
@@ -256,7 +263,7 @@ html.admin-root body {
   }
   & .app-main {
     min-height: 100vh;
-    margin-left: 248px;
+    margin-inline-start: 248px;
   }
   & .mobile-header {
     display: none;
@@ -271,8 +278,9 @@ html.admin-root body {
   & .top-search {
     position: relative;
     flex: 1;
+    min-width: 0;
     max-width: 520px;
-    margin-right: auto;
+    margin-inline-end: auto;
   }
   & .top-search .search {
     max-width: none;
@@ -299,7 +307,7 @@ html.admin-root body {
     border: 0;
     border-radius: 6px;
     background: none;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
   }
   & .search-results button:hover,
@@ -307,7 +315,7 @@ html.admin-root body {
     background: var(--soft);
   }
   & .search-results small {
-    margin-left: auto;
+    margin-inline-start: auto;
     color: var(--muted);
     font-size: 12px;
   }
@@ -329,6 +337,22 @@ html.admin-root body {
     color: var(--ink);
     cursor: pointer;
   }
+  & .language-switch {
+    flex: none;
+    min-height: 44px;
+    min-width: 76px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+  & .language-switch:active {
+    background: var(--soft);
+  }
   & .icon-button:hover,
   & .icon-button.active {
     background: var(--soft);
@@ -337,7 +361,7 @@ html.admin-root body {
   & .icon-button .count-badge {
     position: absolute;
     top: -6px;
-    right: -6px;
+    inset-inline-end: -6px;
     min-width: 20px;
     padding: 0 5px;
     font-size: 11px;
@@ -345,7 +369,9 @@ html.admin-root body {
   & .notifications {
     /* A popover sits in the top layer; pin it under the bell. */
     position: fixed;
-    inset: 70px 24px auto auto;
+    inset: auto;
+    inset-block-start: 70px;
+    inset-inline-end: 24px;
     width: min(360px, calc(100vw - 32px));
     margin: 0;
     padding: 14px;
@@ -372,7 +398,7 @@ html.admin-root body {
     border: 0;
     border-radius: 6px;
     background: none;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
   }
   & .notifications li button:hover {
@@ -412,7 +438,7 @@ html.admin-root body {
   }
   & .narrow-page {
     width: min(980px, 100%);
-    margin-left: 0;
+    margin-inline-start: 0;
   }
   & .loading-page {
     min-height: 100vh;
@@ -515,7 +541,7 @@ html.admin-root body {
   }
   & .error-banner ul {
     margin: 4px 0 0;
-    padding-left: 18px;
+    padding-inline-start: 18px;
     list-style: disc;
   }
   & .error-banner > button {
@@ -607,7 +633,7 @@ html.admin-root body {
   }
   & .group-heading span::before {
     content: "·";
-    margin-right: 8px;
+    margin-inline-end: 8px;
   }
   & .group-row > td {
     height: auto;
@@ -628,7 +654,7 @@ html.admin-root body {
   & th {
     height: 46px;
     padding: 0 16px;
-    text-align: left;
+    text-align: start;
     background: #faf6ef;
     color: var(--muted);
     font-size: 12px;
@@ -650,7 +676,7 @@ html.admin-root body {
   }
   & .price-heading,
   & .table-price {
-    text-align: right;
+    text-align: end;
   }
   & .table-price {
     font-variant-numeric: tabular-nums;
@@ -687,7 +713,7 @@ html.admin-root body {
     background: none;
     color: var(--ink);
     font-weight: 600;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
   }
   & .icon-button,
@@ -760,7 +786,7 @@ html.admin-root body {
   & .menu-popover {
     position: absolute;
     z-index: 20;
-    right: 4px;
+    inset-inline-end: 4px;
     top: 42px;
     width: 160px;
     padding: 6px;
@@ -777,7 +803,7 @@ html.admin-root body {
     border: 0;
     border-radius: 6px;
     background: none;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
   }
   & .menu-popover button:hover {
@@ -958,7 +984,7 @@ html.admin-root body {
     font-size: 12px;
   }
   & .upload-row .text-button {
-    margin-left: 12px;
+    margin-inline-start: 12px;
     color: var(--red);
   }
   & .file-input {
@@ -992,17 +1018,18 @@ html.admin-root body {
   }
   & .currency-input {
     position: relative;
+    direction: ltr;
   }
   & .currency-input input {
-    padding-right: 56px;
+    padding-inline-end: 56px;
   }
   & .currency-input > span {
     position: absolute;
-    right: 12px;
+    inset-inline-end: 12px;
     top: 50%;
     transform: translateY(-50%);
-    padding-left: 9px;
-    border-left: 1px solid var(--line);
+    padding-inline-start: 9px;
+    border-inline-start: 1px solid var(--line);
     color: var(--muted);
     font-size: 12px;
   }
@@ -1069,7 +1096,7 @@ html.admin-root body {
     border: 0;
     background: none;
     padding: 0;
-    margin-left: 3px;
+    margin-inline-start: 3px;
     cursor: pointer;
   }
   & .tag-toggles {
@@ -1227,7 +1254,7 @@ html.admin-root body {
   & .public-item-line b,
   & .photo-preview-copy b {
     font-size: 12px;
-    text-align: right;
+    text-align: end;
     font-variant-numeric: tabular-nums;
   }
   & .public-item-line b small,
@@ -1242,7 +1269,7 @@ html.admin-root body {
   }
   & .photo-preview-copy b {
     display: block;
-    text-align: left;
+    text-align: start;
   }
   & .live-preview > p {
     color: var(--muted);
@@ -1273,7 +1300,7 @@ html.admin-root body {
     content: "";
     position: absolute;
     top: -7px;
-    left: 20px;
+    inset-inline-start: 20px;
     width: 12px;
     height: 12px;
     transform: rotate(45deg);
@@ -1310,7 +1337,7 @@ html.admin-root body {
     position: fixed;
     z-index: 70;
     top: 22px;
-    right: 24px;
+    inset-inline-end: 24px;
     max-width: 540px;
     min-height: 60px;
     padding: 11px 13px;
@@ -1465,7 +1492,7 @@ html.admin-root body {
   & .blocked-message {
     position: fixed;
     z-index: 20;
-    right: 24px;
+    inset-inline-end: 24px;
     bottom: 24px;
     max-width: 460px;
     min-height: 64px;
@@ -1623,12 +1650,12 @@ html.admin-root body {
       width: 220px;
     }
     & .app-main {
-      margin-left: 220px;
+      margin-inline-start: 220px;
     }
     & .page,
     & .topbar {
-      padding-left: 30px;
-      padding-right: 30px;
+      padding-inline-start: 30px;
+      padding-inline-end: 30px;
     }
     & .editor-layout,
     & .shop-layout {
@@ -1659,7 +1686,7 @@ html.admin-root body {
     & .nav-close {
       display: grid;
       place-items: center;
-      margin-left: auto;
+      margin-inline-start: auto;
       width: 44px;
       height: 44px;
       border: 0;
@@ -1675,7 +1702,7 @@ html.admin-root body {
       backdrop-filter: blur(2px);
     }
     & .app-main {
-      margin-left: 0;
+      margin-inline-start: 0;
       padding-top: 60px;
     }
     & .mobile-header {
@@ -1718,7 +1745,8 @@ html.admin-root body {
       min-width: 0;
     }
     & .notifications {
-      inset: 128px 16px auto auto;
+      inset-block-start: 128px;
+      inset-inline-end: 16px;
     }
     & .page-header {
       align-items: flex-start;
@@ -1744,11 +1772,11 @@ html.admin-root body {
       min-width: calc(100% - 40px);
     }
     & .error-banner > button:not(.dismiss) {
-      margin-left: 32px;
+      margin-inline-start: 32px;
     }
     & .error-banner .dismiss {
       position: absolute;
-      right: 18px;
+      inset-inline-end: 18px;
     }
     & .toolbar {
       flex-direction: column;
@@ -1845,7 +1873,7 @@ html.admin-root body {
       position: fixed;
       z-index: 15;
       bottom: 18px;
-      right: 16px;
+      inset-inline-end: 16px;
       min-height: 48px;
       align-items: center;
       gap: 8px;
@@ -1920,8 +1948,7 @@ html.admin-root body {
     }
     & .toast {
       top: 70px;
-      right: 12px;
-      left: 12px;
+      inset-inline: 12px;
       max-width: none;
       flex-wrap: wrap;
     }
@@ -1930,11 +1957,11 @@ html.admin-root body {
       min-width: calc(100% - 100px);
     }
     & .toast a {
-      margin-left: 45px;
+      margin-inline-start: 45px;
     }
     & .toast button {
       position: absolute;
-      right: 5px;
+      inset-inline-end: 5px;
       top: 8px;
     }
     & .section-list-head {
@@ -1948,11 +1975,11 @@ html.admin-root body {
     & .section-row > span {
       grid-column: 1;
       font-size: 12px;
-      padding-left: 12px;
+      padding-inline-start: 12px;
     }
     & .section-row > div:not(.section-name-wrap) {
       grid-column: 1;
-      padding-left: 12px;
+      padding-inline-start: 12px;
     }
     & .section-row > .trash-button {
       grid-column: 2;
@@ -1995,12 +2022,12 @@ html.admin-root body {
 
   @media (max-width: 390px) {
     & .page {
-      padding-left: 12px;
-      padding-right: 12px;
+      padding-inline-start: 12px;
+      padding-inline-end: 12px;
     }
     & .form-section {
-      padding-left: 14px;
-      padding-right: 14px;
+      padding-inline-start: 14px;
+      padding-inline-end: 14px;
     }
     & .segmented {
       width: 100%;
@@ -2191,7 +2218,7 @@ html:has(.admin .mobile-header) {
     gap: 8px;
   }
   & .presence {
-    margin-left: auto;
+    margin-inline-start: auto;
     color: var(--muted);
     font-size: 12px;
   }
@@ -2204,7 +2231,7 @@ html:has(.admin .mobile-header) {
     display: inline-block;
     width: 8px;
     height: 8px;
-    margin-right: 6px;
+    margin-inline-end: 6px;
     border-radius: 50%;
     background: var(--success);
   }
@@ -2290,7 +2317,7 @@ html:has(.admin .mobile-header) {
     text-align: center;
     font-size: 28px;
     letter-spacing: 0.6em;
-    padding-left: 0.6em; /* balances the trailing letter-spacing */
+    padding-inline-start: 0.6em; /* balances the trailing letter-spacing */
   }
   & .pin-input.small {
     max-width: 160px;
@@ -2320,7 +2347,7 @@ html:has(.admin .mobile-header) {
     min-height: 42px;
   }
   & .count-badge {
-    margin-left: auto;
+    margin-inline-start: auto;
     min-width: 22px;
     padding: 2px 8px;
     border-radius: 999px;
@@ -2360,7 +2387,7 @@ html:has(.admin .mobile-header) {
     font-weight: 500;
   }
   & .segmented .count-badge {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
   & .order-list {
     display: grid;
@@ -2397,7 +2424,7 @@ html:has(.admin .mobile-header) {
     color: var(--muted);
   }
   & .order-card > header strong {
-    margin-left: auto;
+    margin-inline-start: auto;
     font-size: 16px;
   }
   & .new-badge,
@@ -2589,7 +2616,7 @@ html:has(.admin .mobile-header) {
   & .chart-table td {
     padding: 6px 8px;
     border-bottom: 1px solid var(--line);
-    text-align: left;
+    text-align: start;
   }
   & .setting-row {
     display: flex;
@@ -2652,5 +2679,35 @@ html:has(.admin .mobile-header) {
 @keyframes new-order-pulse {
   50% {
     transform: scale(1.12);
+  }
+}
+
+/* Mirror the controls whose movement or placement cannot use logical properties. */
+.admin:dir(rtl) {
+  --serif: var(--font-reem-kufi), var(--font-readex), sans-serif;
+
+  & .toggle.on span {
+    transform: translateX(-18px);
+  }
+  & .chart-max {
+    left: auto;
+    right: 0;
+  }
+  & .bar-slot:nth-child(-n + 5) .bar-tip {
+    left: auto;
+    right: 0;
+  }
+  & .bar-slot:nth-last-child(-n + 4) .bar-tip {
+    right: auto;
+    left: 0;
+  }
+
+  @media (max-width: 760px) {
+    & .sidebar {
+      transform: translateX(105%);
+    }
+    & .sidebar.open {
+      transform: translateX(0);
+    }
   }
 }

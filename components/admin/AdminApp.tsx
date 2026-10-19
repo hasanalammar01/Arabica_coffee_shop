@@ -32,6 +32,7 @@ import { currencyLabel, formatAmount } from "@/lib/format";
 import { buildMenu, slugify } from "@/lib/menu-core";
 import { PAGES, type Page } from "@/lib/admin/permissions";
 import { pinProblem } from "@/lib/admin/pin";
+import { pick } from "@/lib/i18n";
 import type { OrderStatus } from "@/lib/orders-core";
 import { ItemEditor, type Destination } from "./ItemEditor";
 import { MenuItems } from "./MenuItems";
@@ -41,14 +42,17 @@ import { Sections } from "./Sections";
 import { PaymentsScreen, SettingsScreen } from "./Settings";
 import { ShopInfo } from "./ShopInfo";
 import { FullLogo, Icon, Logo, Toast, type IconName } from "./ui";
+import { LanguageSwitch, useAdminLanguage } from "./Language";
 
-type Screen = "items" | "editor" | "sections" | "shop" | "orders" | "stats" | "payments" | "settings" | "activity";
+type Screen =
+  "items" | "editor" | "sections" | "shop" | "orders" | "stats" | "payments" | "settings" | "activity";
 export type Editing = { item: DraftItem; sectionKey: string; isNew: boolean; afterKey?: string };
 export type Publish = (next: DraftSection[], message: string) => Promise<void>;
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function AdminApp() {
+  const { t } = useAdminLanguage();
   const [backend, setBackend] = useState<Backend | null>(null);
   const [status, setStatus] = useState<"checking" | "signed-out" | "loading" | "ready">("checking");
   const [authError, setAuthError] = useState("");
@@ -62,7 +66,9 @@ export function AdminApp() {
   // The pages this user may open (all for the super admin). The server enforces the same list.
   const [pages, setPages] = useState<Page[]>([...PAGES]);
   const [isAdmin, setIsAdmin] = useState(true);
-  const orders = useOrders(status === "ready" && ordersDb && (pages.includes("orders") || pages.includes("stats")));
+  const orders = useOrders(
+    status === "ready" && ordersDb && (pages.includes("orders") || pages.includes("stats")),
+  );
 
   // Each screen opens at the top.
   useEffect(() => {
@@ -78,30 +84,33 @@ export function AdminApp() {
   }, [dirty]);
 
   /** Loads the latest menu and shop info, then shows the dashboard. */
-  const open = useCallback(async ({ mode, orders: db, user }: { mode: Mode | null; orders: boolean; user?: SessionUser }) => {
-    setStatus("loading");
-    setAuthError("");
-    try {
-      const b = connect(mode, user);
-      const allowed = user?.pages ?? [...PAGES];
-      setPages(allowed);
-      setIsAdmin(!user || user.role === "admin");
-      // Open on the first page this user may use; Settings ("My account") is always there.
-      setScreen(PAGES.find((p) => allowed.includes(p)) ?? "settings");
-      const [menu, siteData] = await Promise.all([
-        b.loadJson<{ categories: MenuCategoryData[] }>("data/menu.json"),
-        b.loadJson<SiteData>("data/site.json"),
-      ]);
-      setSections(toDraft(menu.categories));
-      setSite(siteData);
-      setBackend(b);
-      setOrdersDb(db);
-      setStatus("ready");
-    } catch (e) {
-      setAuthError(errorText(e));
-      setStatus("signed-out");
-    }
-  }, []);
+  const open = useCallback(
+    async ({ mode, orders: db, user }: { mode: Mode | null; orders: boolean; user?: SessionUser }) => {
+      setStatus("loading");
+      setAuthError("");
+      try {
+        const b = connect(mode, user);
+        const allowed = user?.pages ?? [...PAGES];
+        setPages(allowed);
+        setIsAdmin(!user || user.role === "admin");
+        // Open on the first page this user may use; Settings ("My account") is always there.
+        setScreen(PAGES.find((p) => allowed.includes(p)) ?? "settings");
+        const [menu, siteData] = await Promise.all([
+          b.loadJson<{ categories: MenuCategoryData[] }>("data/menu.json"),
+          b.loadJson<SiteData>("data/site.json"),
+        ]);
+        setSections(toDraft(menu.categories));
+        setSite(siteData);
+        setBackend(b);
+        setOrdersDb(db);
+        setStatus("ready");
+      } catch (e) {
+        setAuthError(errorText(e));
+        setStatus("signed-out");
+      }
+    },
+    [],
+  );
 
   // Check in every 30 seconds while the dashboard is open: keeps "online" accurate for the super admin,
   // and sends someone whose account was disabled or signed out back to the sign-in screen.
@@ -211,13 +220,15 @@ export function AdminApp() {
       }));
       files.push({ path: "data/menu.json", content: toJsonFile(toMenuJson(withPhotos)) });
       const images = await backend!.publish(files, message);
-      setSections(withPhotos.map((section) => ({
-        ...section,
-        items: section.items.map((item) => {
-          if (item.preview?.startsWith("blob:")) URL.revokeObjectURL(item.preview);
-          return { ...item, image: images[item.image] ?? item.image, preview: undefined };
-        }),
-      })));
+      setSections(
+        withPhotos.map((section) => ({
+          ...section,
+          items: section.items.map((item) => {
+            if (item.preview?.startsWith("blob:")) URL.revokeObjectURL(item.preview);
+            return { ...item, image: images[item.image] ?? item.image, preview: undefined };
+          }),
+        })),
+      );
       setNotice(backend!.afterPublish);
     },
     [backend],
@@ -280,7 +291,8 @@ export function AdminApp() {
     );
 
   const go = (to: Screen) => {
-    if (dirty && !confirm("Discard your unpublished changes?")) return false;
+    if (dirty && !confirm(t("Discard your unpublished changes?", "هل تريد تجاهل التغييرات غير المنشورة؟")))
+      return false;
     setDirty(false);
     setScreen(to);
     return true;
@@ -337,7 +349,14 @@ export function AdminApp() {
         </div>
       ) : (
         <>
-          {screen === "orders" && <OrdersScreen data={orders.data} error={orders.error} timeZone={site.timeZone} onStatus={orders.setStatus} />}
+          {screen === "orders" && (
+            <OrdersScreen
+              data={orders.data}
+              error={orders.error}
+              timeZone={site.timeZone}
+              onStatus={orders.setStatus}
+            />
+          )}
           {screen === "stats" && <StatsScreen data={orders.data} error={orders.error} />}
           {screen === "payments" && <PaymentsScreen setDirty={setDirty} onSaved={setNotice} />}
           {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} pages={pages} />}
@@ -383,29 +402,39 @@ function SignIn({
   onReset: () => void;
   onBack: () => void;
 }) {
+  const { t, localizeError } = useAdminLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (username && password) onSignIn(username, password);
   };
-  if (pinStep) return <PinStep loading={loading} error={error} onPin={onPin} onReset={onReset} onBack={onBack} />;
+  if (pinStep)
+    return <PinStep loading={loading} error={error} onPin={onPin} onReset={onReset} onBack={onBack} />;
   return (
     <main id="main" className="sign-in">
+      <div className="sign-in-language">
+        <LanguageSwitch />
+      </div>
       <form className="sign-in-card" onSubmit={submit}>
         <FullLogo />
-        <h1>Arabica admin</h1>
-        <p>{checking || loading ? "Loading the menu…" : "Sign in to edit the Arabica menu."}</p>
+        <h1>{t("Arabica admin", "إدارة أرابيكا")}</h1>
+        <p>
+          {checking || loading
+            ? t("Loading the menu…", "جارٍ تحميل القائمة…")
+            : t("Sign in to edit the Arabica menu.", "سجّل الدخول لتعديل قائمة أرابيكا.")}
+        </p>
         {error && (
           <span className="error-text" role="alert">
-            {error}
+            {localizeError(error)}
           </span>
         )}
         {!checking && (
           <>
             <label className="field">
-              <span className="field-label">Username</span>
+              <span className="field-label">{t("Username", "اسم المستخدم")}</span>
               <input
+                dir="ltr"
                 autoComplete="username"
                 autoCapitalize="none"
                 value={username}
@@ -415,8 +444,9 @@ function SignIn({
               />
             </label>
             <label className="field">
-              <span className="field-label">Password</span>
+              <span className="field-label">{t("Password", "كلمة المرور")}</span>
               <input
+                dir="ltr"
                 type="password"
                 autoComplete="current-password"
                 value={password}
@@ -425,9 +455,14 @@ function SignIn({
               />
             </label>
             <button type="submit" className="button primary" disabled={loading || !username || !password}>
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? t("Signing in…", "جارٍ تسجيل الدخول…") : t("Sign in", "تسجيل الدخول")}
             </button>
-            <small>First time? The username is &ldquo;admin&rdquo; until it&apos;s changed in Settings.</small>
+            <small>
+              {t(
+                "First time? The username is “admin” until it's changed in Settings.",
+                "هل هذه أول مرة؟ اسم المستخدم هو “admin” إلى أن يتم تغييره في الإعدادات.",
+              )}
+            </small>
           </>
         )}
       </form>
@@ -449,6 +484,7 @@ function PinStep({
   onReset: () => void;
   onBack: () => void;
 }) {
+  const { t, localizeError } = useAdminLanguage();
   const [forgot, setForgot] = useState(false);
   const [pin, setPin] = useState("");
   // A wrong PIN clears the field for the next try.
@@ -465,6 +501,9 @@ function PinStep({
   };
   return (
     <main id="main" className="sign-in">
+      <div className="sign-in-language">
+        <LanguageSwitch />
+      </div>
       <form
         className="sign-in-card"
         onSubmit={(e) => {
@@ -473,16 +512,21 @@ function PinStep({
         }}
       >
         <FullLogo />
-        <h1>Enter your PIN</h1>
-        <p>{loading ? "Checking…" : "Your 4-digit sign-in PIN."}</p>
+        <h1>{t("Enter your PIN", "أدخل رمز الدخول")}</h1>
+        <p>
+          {loading
+            ? t("Checking…", "جارٍ التحقّق…")
+            : t("Your 4-digit sign-in PIN.", "رمز الدخول المكوّن من ٤ أرقام.")}
+        </p>
         {error && (
           <span className="error-text" role="alert">
-            {error}
+            {localizeError(error)}
           </span>
         )}
         <label className="field">
-          <span className="field-label">PIN</span>
+          <span className="field-label">{t("PIN", "رمز الدخول")}</span>
           <input
+            dir="ltr"
             className="pin-input"
             type="password"
             inputMode="numeric"
@@ -496,13 +540,13 @@ function PinStep({
           />
         </label>
         <button type="submit" className="button primary" disabled={loading || pin.length !== 4}>
-          {loading ? "Checking…" : "Continue"}
+          {loading ? t("Checking…", "جارٍ التحقّق…") : t("Continue", "متابعة")}
         </button>
         <button type="button" className="button ghost" onClick={() => setForgot(true)} disabled={loading}>
-          Forgot PIN?
+          {t("Forgot PIN?", "نسيت رمز الدخول؟")}
         </button>
         <button type="button" className="button ghost" onClick={onBack} disabled={loading}>
-          Use a different account
+          {t("Use a different account", "استخدام حساب آخر")}
         </button>
       </form>
     </main>
@@ -511,6 +555,7 @@ function PinStep({
 
 /** Forgot PIN: a 6-digit code by WhatsApp, then a new PIN. Only reachable after the password. */
 function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const { t, localizeError } = useAdminLanguage();
   const [sentTo, setSentTo] = useState("");
   const [code, setCode] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -547,28 +592,38 @@ function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
 
   return (
     <main id="main" className="sign-in">
+      <div className="sign-in-language">
+        <LanguageSwitch />
+      </div>
       <form className="sign-in-card" onSubmit={submit}>
         <FullLogo />
-        <h1>Reset your PIN</h1>
+        <h1>{t("Reset your PIN", "إعادة تعيين رمز الدخول")}</h1>
         <p>
           {sentTo
-            ? `We sent a 6-digit code to the admin WhatsApp (${sentTo}). It works for 10 minutes.`
-            : "We'll send a 6-digit code to the admin WhatsApp number saved in Settings."}
+            ? t(
+                `We sent a 6-digit code to the admin WhatsApp (${sentTo}). It works for 10 minutes.`,
+                `أرسلنا رمزًا من ٦ أرقام إلى واتساب المسؤول (${sentTo}). صلاحيته ١٠ دقائق.`,
+              )
+            : t(
+                "We'll send a 6-digit code to the admin WhatsApp number saved in Settings.",
+                "سنرسل رمزًا من ٦ أرقام إلى رقم واتساب المسؤول المحفوظ في الإعدادات.",
+              )}
         </p>
         {error && (
           <span className="error-text" role="alert">
-            {error}
+            {localizeError(error)}
           </span>
         )}
         {!sentTo ? (
           <button type="button" className="button primary" onClick={send} disabled={busy}>
-            {busy ? "Sending…" : "Send the code"}
+            {busy ? t("Sending…", "جارٍ الإرسال…") : t("Send the code", "إرسال الرمز")}
           </button>
         ) : (
           <>
             <label className="field">
-              <span className="field-label">Code from WhatsApp</span>
+              <span className="field-label">{t("Code from WhatsApp", "الرمز المرسل عبر واتساب")}</span>
               <input
+                dir="ltr"
                 className="pin-input"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -579,8 +634,9 @@ function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
               />
             </label>
             <label className="field">
-              <span className="field-label">New PIN</span>
+              <span className="field-label">{t("New PIN", "رمز الدخول الجديد")}</span>
               <input
+                dir="ltr"
                 className="pin-input"
                 type="password"
                 inputMode="numeric"
@@ -591,8 +647,9 @@ function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
               />
             </label>
             <label className="field">
-              <span className="field-label">Repeat the new PIN</span>
+              <span className="field-label">{t("Repeat the new PIN", "أعد إدخال رمز الدخول الجديد")}</span>
               <input
+                dir="ltr"
                 className="pin-input"
                 type="password"
                 inputMode="numeric"
@@ -607,15 +664,17 @@ function ForgotPin({ onDone, onCancel }: { onDone: () => void; onCancel: () => v
               className="button primary"
               disabled={busy || code.length !== 6 || newPin.length !== 4 || confirm.length !== 4}
             >
-              {busy ? "Saving…" : "Set new PIN and sign in"}
+              {busy
+                ? t("Saving…", "جارٍ الحفظ…")
+                : t("Set new PIN and sign in", "حفظ الرمز الجديد وتسجيل الدخول")}
             </button>
             <button type="button" className="button ghost" onClick={send} disabled={busy}>
-              Send a new code
+              {t("Send a new code", "إرسال رمز جديد")}
             </button>
           </>
         )}
         <button type="button" className="button ghost" onClick={onCancel} disabled={busy}>
-          Back to PIN
+          {t("Back to PIN", "العودة إلى رمز الدخول")}
         </button>
       </form>
     </main>
@@ -647,29 +706,31 @@ function AppShell({
   onOpenItem: (e: Editing) => void;
   children: ReactNode;
 }) {
+  const { lang, t } = useAdminLanguage();
   const [mobileNav, setMobileNav] = useState(false);
-  const allNav: { group: string; items: { id: Screen; label: string; icon: IconName; badge?: number }[] }[] = [
-    {
-      group: "Menu",
-      items: [
-        { id: "items", label: "Menu items", icon: "menu" },
-        { id: "sections", label: "Sections", icon: "sections" },
-        { id: "shop", label: "Shop info", icon: "shop" },
-      ],
-    },
-    {
-      group: "Online orders",
-      items: [
-        { id: "orders", label: "Orders", icon: "bag", badge: newOrders },
-        { id: "stats", label: "Statistics", icon: "chart" },
-        { id: "payments", label: "Payment methods", icon: "card" },
-      ],
-    },
-    {
-      group: "Admin",
-      items: isAdmin ? [{ id: "activity", label: "Activity", icon: "clock" }] : [],
-    },
-  ];
+  const allNav: { group: string; items: { id: Screen; label: string; icon: IconName; badge?: number }[] }[] =
+    [
+      {
+        group: t("Menu", "القائمة"),
+        items: [
+          { id: "items", label: t("Menu items", "أصناف القائمة"), icon: "menu" },
+          { id: "sections", label: t("Sections", "الأقسام"), icon: "sections" },
+          { id: "shop", label: t("Shop info", "معلومات المقهى"), icon: "shop" },
+        ],
+      },
+      {
+        group: t("Online orders", "الطلبات عبر الإنترنت"),
+        items: [
+          { id: "orders", label: t("Orders", "الطلبات"), icon: "bag", badge: newOrders },
+          { id: "stats", label: t("Statistics", "الإحصاءات"), icon: "chart" },
+          { id: "payments", label: t("Payment methods", "طرق الدفع"), icon: "card" },
+        ],
+      },
+      {
+        group: t("Admin", "الإدارة"),
+        items: isAdmin ? [{ id: "activity", label: t("Activity", "سجل النشاط"), icon: "clock" }] : [],
+      },
+    ];
   const nav = allNav
     // Only the pages this user may open. Settings is the gear in the top bar, always there.
     .map((g) => ({
@@ -690,19 +751,19 @@ function AppShell({
         <div className="brand">
           <Logo />
           <div>
-            <strong>Arabica</strong>
-            <small>Admin</small>
+            <strong>{t("Arabica", "أرابيكا")}</strong>
+            <small>{t("Admin", "الإدارة")}</small>
           </div>
           <button
             type="button"
             className="nav-close"
             onClick={() => setMobileNav(false)}
-            aria-label="Close menu"
+            aria-label={t("Close menu", "إغلاق القائمة")}
           >
             <Icon name="close" />
           </button>
         </div>
-        <nav aria-label="Dashboard navigation">
+        <nav aria-label={t("Dashboard navigation", "التنقّل في لوحة الإدارة")}>
           {nav.map(({ group, items }) => (
             <div key={group} className="nav-group">
               <small>{group}</small>
@@ -716,26 +777,36 @@ function AppShell({
                 >
                   <Icon name={item.icon} />
                   <span>{item.label}</span>
-                  {item.badge ? <b className="count-badge">{item.badge} new</b> : null}
+                  {item.badge ? (
+                    <b className="count-badge">
+                      {item.badge} {t("new", "جديد")}
+                    </b>
+                  ) : null}
                 </button>
               ))}
             </div>
           ))}
         </nav>
         <div className="sidebar-foot">
-          <a href="/menu" target="_blank" rel="noreferrer">
+          <a href={lang === "ar" ? "/ar/menu" : "/menu"} target="_blank" rel="noreferrer">
             <Icon name="external" />
-            <span>View public menu</span>
+            <span>{t("View public menu", "عرض القائمة العامة")}</span>
           </a>
           <div className="profile">
             <div>{initials}</div>
             <span>
               <b>{user.name}</b>
-              <small>{user.detail}</small>
+              <small>
+                {user.detail === "Staff"
+                  ? t("Staff", "موظّف")
+                  : user.detail === "Super admin"
+                    ? t("Super admin", "المسؤول الرئيسي")
+                    : t("Editing files on this computer", "تعديل الملفات على هذا الكمبيوتر")}
+              </small>
             </span>
           </div>
           <button type="button" className="sign-out" onClick={onSignOut}>
-            Sign out
+            {t("Sign out", "تسجيل الخروج")}
           </button>
         </div>
       </aside>
@@ -744,12 +815,16 @@ function AppShell({
           type="button"
           className="scrim"
           onClick={() => setMobileNav(false)}
-          aria-label="Close navigation"
+          aria-label={t("Close navigation", "إغلاق قائمة التنقّل")}
         />
       )}
       <main id="main" className="app-main">
         <header className="mobile-header">
-          <button type="button" aria-label="Open navigation" onClick={() => setMobileNav(true)}>
+          <button
+            type="button"
+            aria-label={t("Open navigation", "فتح قائمة التنقّل")}
+            onClick={() => setMobileNav(true)}
+          >
             <Icon name="menu" />
           </button>
           <Logo />
@@ -758,17 +833,21 @@ function AppShell({
         <div className="topbar">
           <TopSearch
             sections={pages.includes("items") ? sections : []}
-            pages={[...nav.flatMap((g) => g.items), { id: "settings", label: "Settings", icon: "settings" }]}
+            pages={[
+              ...nav.flatMap((g) => g.items),
+              { id: "settings", label: t("Settings", "الإعدادات"), icon: "settings" },
+            ]}
             go={go}
             onOpenItem={onOpenItem}
           />
+          <LanguageSwitch />
           {pages.includes("orders") && <Notifications orders={orders} count={newOrders} go={go} />}
           <button
             type="button"
             className={`icon-button ${active === "settings" ? "active" : ""}`}
-            aria-label="Settings"
+            aria-label={t("Settings", "الإعدادات")}
             aria-current={active === "settings" ? "page" : undefined}
-            title="Settings"
+            title={t("Settings", "الإعدادات")}
             onClick={() => go("settings")}
           >
             <Icon name="settings" />
@@ -794,6 +873,7 @@ function TopSearch({
   go: (to: Screen) => boolean;
   onOpenItem: (e: Editing) => void;
 }) {
+  const { lang, t } = useAdminLanguage();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const q = query.trim().toLowerCase();
@@ -801,15 +881,21 @@ function TopSearch({
     ? [
         ...pages
           .filter((p) => p.label.toLowerCase().includes(q))
-          .map((p) => ({ key: `page-${p.id}`, icon: p.icon, label: p.label, detail: "Page", run: () => go(p.id) })),
+          .map((p) => ({
+            key: `page-${p.id}`,
+            icon: p.icon,
+            label: p.label,
+            detail: t("Page", "صفحة"),
+            run: () => go(p.id),
+          })),
         ...sections.flatMap((s) =>
           s.items
             .filter((i) => i.name.toLowerCase().includes(q) || i.nameAr.includes(q))
             .map((i) => ({
               key: i.key,
               icon: "menu" as const,
-              label: i.name || i.nameAr,
-              detail: s.name,
+              label: pick(lang, i.name || i.nameAr, i.nameAr),
+              detail: pick(lang, s.name, s.nameAr),
               run: () => onOpenItem({ item: i, sectionKey: s.key, isNew: false }),
             })),
         ),
@@ -821,17 +907,14 @@ function TopSearch({
     setOpen(false);
   };
   return (
-    <div
-      className="top-search"
-      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}
-    >
+    <div className="top-search" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
       <label className="search">
         <Icon name="search" />
         <input
           type="search"
           value={query}
-          placeholder="Search menu items and pages"
-          aria-label="Search menu items and pages"
+          placeholder={t("Search menu items and pages", "البحث في الأصناف والصفحات")}
+          aria-label={t("Search menu items and pages", "البحث في الأصناف والصفحات")}
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
@@ -854,7 +937,7 @@ function TopSearch({
               </button>
             ))
           ) : (
-            <p>Nothing matches &lsquo;{query.trim()}&rsquo;.</p>
+            <p>{t(`Nothing matches ‘${query.trim()}’.`, `لا توجد نتائج لـ«${query.trim()}».`)}</p>
           )}
         </div>
       )}
@@ -862,9 +945,10 @@ function TopSearch({
   );
 }
 
-const ago = (iso: string) => {
+const ago = (iso: string, locale: string) => {
   const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
-  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  return min < 60 ? relative.format(-min, "minute") : relative.format(-Math.round(min / 60), "hour");
 };
 
 /** The bell: new orders waiting for staff, newest first. */
@@ -877,6 +961,7 @@ function Notifications({
   count: number;
   go: (to: Screen) => boolean;
 }) {
+  const { locale, t } = useAdminLanguage();
   const panel = useRef<HTMLDivElement>(null);
   const fresh = orders.filter((o) => o.status === "new").slice(0, 6);
   const openOrders = () => go("orders") && panel.current?.hidePopover();
@@ -886,14 +971,18 @@ function Notifications({
         type="button"
         className="icon-button"
         popoverTarget="notifications"
-        aria-label={count ? `Notifications: ${count} new order${count === 1 ? "" : "s"}` : "Notifications"}
-        title="Notifications"
+        aria-label={
+          count
+            ? t(`Notifications: ${count} new order${count === 1 ? "" : "s"}`, `التنبيهات: ${count} طلب جديد`)
+            : t("Notifications", "التنبيهات")
+        }
+        title={t("Notifications", "التنبيهات")}
       >
         <Icon name="bell" />
         {count > 0 && <b className="count-badge">{count}</b>}
       </button>
       <div id="notifications" popover="auto" ref={panel} className="notifications">
-        <h2>Notifications</h2>
+        <h2>{t("Notifications", "التنبيهات")}</h2>
         {fresh.length ? (
           <ul>
             {fresh.map((o) => (
@@ -902,11 +991,12 @@ function Notifications({
                   <Icon name="bag" size={18} />
                   <span>
                     <b>
-                      New order #{o.id} · {o.name}
+                      {t(`New order #${o.id}`, `طلب جديد #${o.id}`)} · {o.name}
                     </b>
                     <small>
-                      {formatAmount(o.total)} {currencyLabel} · {o.fulfilment === "pickup" ? "Pickup" : "Delivery"} ·{" "}
-                      {ago(o.createdAt)}
+                      {formatAmount(o.total)} {t(currencyLabel, "ل.ل")} ·{" "}
+                      {o.fulfilment === "pickup" ? t("Pickup", "استلام من المقهى") : t("Delivery", "توصيل")} ·{" "}
+                      {ago(o.createdAt, locale)}
                     </small>
                   </span>
                 </button>
@@ -914,17 +1004,17 @@ function Notifications({
             ))}
           </ul>
         ) : (
-          <p>No new orders right now.</p>
+          <p>{t("No new orders right now.", "لا توجد طلبات جديدة حاليًا.")}</p>
         )}
         <button type="button" className="see-all" onClick={openOrders}>
-          Open orders
+          {t("Open orders", "فتح الطلبات")}
         </button>
       </div>
     </>
   );
 }
 
-const ORDER_SCREENS: Screen[] =["orders", "stats", "payments", "settings", "activity"];
+const ORDER_SCREENS: Screen[] = ["orders", "stats", "payments", "settings", "activity"];
 const POLL_MS = 15_000;
 
 /** A short chime for a new order (no audio file needed). Browsers allow it once staff have clicked the page. */
@@ -949,6 +1039,7 @@ function chime() {
 
 /** Polls the orders while the admin is open; chimes and updates the tab title when a new one arrives. */
 function useOrders(enabled: boolean) {
+  const { t } = useAdminLanguage();
   const [data, setData] = useState<OrdersOverview | null>(null);
   const [error, setError] = useState("");
   const lastId = useRef<number | null>(null);
@@ -978,8 +1069,10 @@ function useOrders(enabled: boolean) {
   // Re-applied after every poll, so nothing that resets the page title leaves it stale.
   useEffect(() => {
     const n = data?.newOrders ?? 0;
-    document.title = n ? `(${n}) New order${n === 1 ? "" : "s"} · Arabica admin` : "Arabica admin";
-  }, [data]);
+    document.title = n
+      ? t(`(${n}) New order${n === 1 ? "" : "s"} · Arabica admin`, `(${n}) طلب جديد · إدارة أرابيكا`)
+      : t("Arabica admin", "إدارة أرابيكا");
+  }, [data, t]);
 
   const setStatus = useCallback(
     async (id: number, status: OrderStatus) => {

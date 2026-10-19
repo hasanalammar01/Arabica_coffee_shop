@@ -29,11 +29,13 @@ import {
   type ShopSettings,
 } from "@/lib/orders-core";
 import { Button, ErrorBanner, Field, Icon, PageHeader, Toggle } from "./ui";
+import { useAdminLanguage } from "./Language";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Loads the settings once; `update` edits the draft, `save` stores it. */
 function useShopSettings(setDirty: (d: boolean) => void, onSaved: (message: string) => void) {
+  const { t } = useAdminLanguage();
   const [data, setData] = useState<SettingsData | null>(null);
   const [shop, setShop] = useState<ShopSettings | null>(null);
   const [dirty, setLocalDirty] = useState(false);
@@ -63,7 +65,12 @@ function useShopSettings(setDirty: (d: boolean) => void, onSaved: (message: stri
       setShop(saved);
       setData((d) => (d ? { ...d, shop: saved } : d));
       setLocalDirty(false);
-      onSaved("Saved. The website uses the new settings right away.");
+      onSaved(
+        t(
+          "Saved. The website uses the new settings right away.",
+          "تم الحفظ. يستخدم الموقع الإعدادات الجديدة فورًا.",
+        ),
+      );
       return true;
     } catch (e) {
       setError(errorText(e));
@@ -92,15 +99,22 @@ function SaveBar({
   onDiscard: () => void;
   blocked?: boolean;
 }) {
+  const { t } = useAdminLanguage();
   return (
     <div className="bottom-actions">
-      <span>{busy ? "Saving…" : dirty ? "Unsaved changes" : "No changes"}</span>
+      <span>
+        {busy
+          ? t("Saving…", "جارٍ الحفظ…")
+          : dirty
+            ? t("Unsaved changes", "تغييرات غير محفوظة")
+            : t("No changes", "لا توجد تغييرات")}
+      </span>
       <div>
         <Button variant="secondary" disabled={!dirty || busy} onClick={onDiscard}>
-          Discard
+          {t("Discard", "تجاهل")}
         </Button>
         <Button disabled={!dirty || busy || blocked} onClick={onSave}>
-          {busy ? "Saving…" : "Save"}
+          {busy ? t("Saving…", "جارٍ الحفظ…") : t("Save", "حفظ")}
         </Button>
       </div>
     </div>
@@ -135,29 +149,6 @@ const KIND_NAME_AR: Record<PaymentKind, string> = {
   bank: "تحويل مصرفي",
   other: "",
 };
-const KIND_HINT: Record<PaymentKind, string> = {
-  cash: "Customers pay in cash when they receive the order. Nothing else to fill in.",
-  whish: "Customers send the total to this Whish number, then you check it arrived.",
-  card: "The driver (or the counter) takes the card on a card machine. Never type card numbers or CVVs here.",
-  bank: "Customers transfer the total to this account. Only receiving details: never share passwords or card numbers.",
-  other: "For anything else (OMT, a wallet…). Write exactly what customers should do.",
-};
-const FIELD_LABEL: Partial<Record<keyof PaymentMethod, string>> = {
-  phone: "Whish phone number",
-  accountName: "Account name",
-  cards: "Accepted cards",
-  bank: "Bank name",
-  iban: "IBAN or account number",
-  details: "Instructions",
-};
-const PLACEHOLDER: Partial<Record<keyof PaymentMethod, string>> = {
-  phone: "e.g. 03 123 456",
-  accountName: "Name on the account",
-  cards: "e.g. Visa, Mastercard",
-  bank: "e.g. Bank Audi",
-  iban: "e.g. LB62 0999 0000 0001 0019 0122 9114",
-  details: "e.g. Send the total by OMT to …",
-};
 
 const blankMethod = (): PaymentMethod => ({
   id: crypto.randomUUID().slice(0, 8),
@@ -174,8 +165,53 @@ const blankMethod = (): PaymentMethod => ({
   detailsAr: "",
 });
 
-export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) => void; onSaved: (m: string) => void }) {
+export function PaymentsScreen({
+  setDirty,
+  onSaved,
+}: {
+  setDirty: (d: boolean) => void;
+  onSaved: (m: string) => void;
+}) {
+  const { lang, t } = useAdminLanguage();
   const s = useShopSettings(setDirty, onSaved);
+  const KIND_HINT: Record<PaymentKind, string> = {
+    cash: t(
+      "Customers pay in cash when they receive the order. Nothing else to fill in.",
+      "يدفع العملاء نقدًا عند استلام الطلب. لا حاجة إلى تفاصيل إضافية.",
+    ),
+    whish: t(
+      "Customers send the total to this Whish number, then you check it arrived.",
+      "يرسل العملاء المبلغ إلى رقم ويش هذا، ثم تتحقق من وصوله.",
+    ),
+    card: t(
+      "The driver (or the counter) takes the card on a card machine. Never type card numbers or CVVs here.",
+      "يستقبل السائق أو موظف الصندوق الدفع عبر جهاز البطاقات. لا تُدخل أرقام البطاقات أو رموز الأمان هنا.",
+    ),
+    bank: t(
+      "Customers transfer the total to this account. Only receiving details: never share passwords or card numbers.",
+      "يحوّل العملاء المبلغ إلى هذا الحساب. أدخل بيانات الاستلام فقط، ولا تشارك كلمات المرور أو أرقام البطاقات.",
+    ),
+    other: t(
+      "For anything else (OMT, a wallet…). Write exactly what customers should do.",
+      "للطرق الأخرى مثل OMT أو المحافظ الإلكترونية. وضّح للعملاء الخطوات المطلوبة.",
+    ),
+  };
+  const FIELD_LABEL: Partial<Record<keyof PaymentMethod, string>> = {
+    phone: t("Whish phone number", "رقم هاتف ويش"),
+    accountName: t("Account name", "اسم الحساب"),
+    cards: t("Accepted cards", "البطاقات المقبولة"),
+    bank: t("Bank name", "اسم المصرف"),
+    iban: t("IBAN or account number", "رقم الحساب أو IBAN"),
+    details: t("Instructions", "التعليمات"),
+  };
+  const PLACEHOLDER: Partial<Record<keyof PaymentMethod, string>> = {
+    phone: t("e.g. 03 123 456", "مثال: 03 123 456"),
+    accountName: t("Name on the account", "الاسم المسجّل على الحساب"),
+    cards: t("e.g. Visa, Mastercard", "مثال: Visa، Mastercard"),
+    bank: t("e.g. Bank Audi", "مثال: بنك عوده"),
+    iban: t("e.g. LB62 0999 0000 0001 0019 0122 9114", "مثال: LB62 0999 0000 0001 0019 0122 9114"),
+    details: t("e.g. Send the total by OMT to …", "مثال: أرسل المبلغ عبر OMT إلى …"),
+  };
   const methods = s.shop?.payments ?? [];
   const edit = (index: number, patch: Partial<PaymentMethod>) =>
     s.update({ payments: methods.map((m, i) => (i === index ? { ...m, ...patch } : m)) });
@@ -193,45 +229,70 @@ export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
   return (
     <div className="page narrow-page">
       <PageHeader
-        eyebrow="Online orders"
-        title="Payment methods"
-        description="Choose how customers can pay, and fill in the details each method needs."
+        eyebrow={t("Online orders", "الطلبات الإلكترونية")}
+        title={t("Payment methods", "طرق الدفع")}
+        description={t(
+          "Choose how customers can pay, and fill in the details each method needs.",
+          "اختر طرق الدفع المتاحة للعملاء وأدخل التفاصيل المطلوبة لكل طريقة.",
+        )}
       />
       {s.error && <ErrorBanner message={s.error} onClose={() => s.setError("")} />}
-      {!s.shop && !s.error && <p className="muted-text">Loading…</p>}
+      {!s.shop && !s.error && <p className="muted-text">{t("Loading…", "جارٍ التحميل…")}</p>}
       {s.shop && (
         <>
           {!methods.some(paymentReady) && (
-            <div className="info-banner">Turn on at least one complete method, or customers can&apos;t place orders.</div>
+            <div className="info-banner">
+              {t(
+                "Turn on at least one complete method, or customers can't place orders.",
+                "فعّل طريقة دفع مكتملة واحدة على الأقل ليتمكن العملاء من إرسال الطلبات.",
+              )}
+            </div>
           )}
           {methods.map((m, i) => {
             const missing = REQUIRED_FIELDS[m.kind].filter((f) => !String(m[f]).trim());
             return (
               <section key={m.id} className="form-section payment-method">
                 <SettingRow
-                  title={m.name || "New payment method"}
-                  toggle={<Toggle checked={m.enabled} onChange={(enabled) => edit(i, { enabled })} label={`Offer ${m.name}`} />}
+                  title={
+                    (lang === "ar" ? m.nameAr || m.name : m.name) ||
+                    t("New payment method", "طريقة دفع جديدة")
+                  }
+                  toggle={
+                    <Toggle
+                      checked={m.enabled}
+                      onChange={(enabled) => edit(i, { enabled })}
+                      label={t(`Offer ${m.name}`, `إتاحة ${m.nameAr || m.name}`)}
+                    />
+                  }
                 >
                   {!m.enabled
-                    ? "Hidden from customers."
+                    ? t("Hidden from customers.", "مخفية عن العملاء.")
                     : missing.length
-                      ? `Hidden from customers until you fill in: ${missing.map((f) => FIELD_LABEL[f]).join(", ")}.`
-                      : "Customers can choose this when ordering."}
+                      ? t(
+                          `Hidden from customers until you fill in: ${missing.map((f) => FIELD_LABEL[f]).join(", ")}.`,
+                          `مخفية عن العملاء حتى تُكمل: ${missing.map((f) => FIELD_LABEL[f]).join("، ")}.`,
+                        )
+                      : t("Customers can choose this when ordering.", "يمكن للعملاء اختيارها عند الطلب.")}
                 </SettingRow>
-                <Field label="Type" hint={KIND_HINT[m.kind]}>
+                <Field label={t("Type", "النوع")} hint={KIND_HINT[m.kind]}>
                   <select value={m.kind} onChange={(e) => changeKind(i, e.target.value as PaymentKind)}>
                     {PAYMENT_KINDS.map((k) => (
                       <option key={k} value={k}>
-                        {KIND_LABEL[k]}
+                        {t(KIND_LABEL[k], KIND_NAME_AR[k] || "أخرى")}
                       </option>
                     ))}
                   </select>
                 </Field>
                 <div className="form-grid">
-                  <Field label="Name customers see" required>
-                    <input value={m.name} onChange={(e) => edit(i, { name: e.target.value })} placeholder="e.g. Whish Money" />
+                  <Field label={t("Name customers see", "الاسم الظاهر للعملاء")} required>
+                    <input
+                      dir="ltr"
+                      value={m.name}
+                      onChange={(e) => edit(i, { name: e.target.value })}
+                      placeholder={t("e.g. Whish Money", "مثال: Whish Money")}
+                    />
                   </Field>
-                  <Field label="Name in Arabic">
+                  <Field label={t("Name in Arabic", "الاسم بالعربية")}>
                     <input dir="rtl" value={m.nameAr} onChange={(e) => edit(i, { nameAr: e.target.value })} />
                   </Field>
                   {REQUIRED_FIELDS[m.kind]
@@ -251,32 +312,59 @@ export function PaymentsScreen({ setDirty, onSaved }: { setDirty: (d: boolean) =
                     ))}
                 </div>
                 <Field
-                  label={m.kind === "other" ? "Instructions for customers" : "Extra note (optional)"}
+                  label={
+                    m.kind === "other"
+                      ? t("Instructions for customers", "تعليمات للعملاء")
+                      : t("Extra note (optional)", "ملاحظة إضافية (اختياري)")
+                  }
                   required={m.kind === "other"}
-                  hint={m.kind === "other" ? undefined : "e.g. Send a screenshot of the transfer on WhatsApp."}
+                  hint={
+                    m.kind === "other"
+                      ? undefined
+                      : t(
+                          "e.g. Send a screenshot of the transfer on WhatsApp.",
+                          "مثال: أرسل لقطة شاشة للحوالة عبر واتساب.",
+                        )
+                  }
                 >
                   <textarea
                     rows={2}
+                    dir="ltr"
                     value={m.details}
                     onChange={(e) => edit(i, { details: e.target.value })}
                     placeholder={m.kind === "other" ? PLACEHOLDER.details : undefined}
                   />
                 </Field>
-                <Field label={m.kind === "other" ? "Instructions in Arabic" : "Extra note in Arabic"}>
-                  <textarea rows={2} dir="rtl" value={m.detailsAr} onChange={(e) => edit(i, { detailsAr: e.target.value })} />
+                <Field
+                  label={
+                    m.kind === "other"
+                      ? t("Instructions in Arabic", "التعليمات بالعربية")
+                      : t("Extra note in Arabic", "ملاحظة إضافية بالعربية")
+                  }
+                >
+                  <textarea
+                    rows={2}
+                    dir="rtl"
+                    value={m.detailsAr}
+                    onChange={(e) => edit(i, { detailsAr: e.target.value })}
+                  />
                 </Field>
                 <button
                   type="button"
                   className="delete-item-button"
                   onClick={() => s.update({ payments: methods.filter((_, j) => j !== i) })}
                 >
-                  <Icon name="trash" /> Remove this method
+                  <Icon name="trash" /> {t("Remove this method", "إزالة هذه الطريقة")}
                 </button>
               </section>
             );
           })}
-          <button type="button" className="add-row" onClick={() => s.update({ payments: [...methods, blankMethod()] })}>
-            <Icon name="plus" /> Add a payment method
+          <button
+            type="button"
+            className="add-row"
+            onClick={() => s.update({ payments: [...methods, blankMethod()] })}
+          >
+            <Icon name="plus" /> {t("Add a payment method", "إضافة طريقة دفع")}
           </button>
           <SaveBar busy={s.busy} dirty={s.dirty} onSave={() => s.save()} onDiscard={s.discard} />
         </>
@@ -296,6 +384,7 @@ export function SettingsScreen({
   onSaved: (m: string) => void;
   pages: Page[];
 }) {
+  const { t, localizeError } = useAdminLanguage();
   const s = useShopSettings(setDirty, onSaved);
   const isAdmin = s.data?.role === "admin";
   // Ordering and notifications: the super admin, or staff given "Settings".
@@ -306,7 +395,9 @@ export function SettingsScreen({
   const [whatsappPin, setWhatsappPin] = useState("");
   const saved = s.data?.shop?.whatsapp;
   const numberChanged =
-    pinSet && Boolean(s.shop && saved) && (s.shop!.whatsapp.phone !== saved!.phone || s.shop!.whatsapp.apiKey !== saved!.apiKey);
+    pinSet &&
+    Boolean(s.shop && saved) &&
+    (s.shop!.whatsapp.phone !== saved!.phone || s.shop!.whatsapp.apiKey !== saved!.apiKey);
   const [testing, setTesting] = useState<"whatsapp" | "email" | null>(null);
   const [testResult, setTestResult] = useState("");
 
@@ -315,7 +406,14 @@ export function SettingsScreen({
     setTestResult("");
     try {
       await testNotification(channel);
-      setTestResult(channel === "whatsapp" ? "Test sent. Check WhatsApp on that phone." : "Test sent. Check the inbox (and spam).");
+      setTestResult(
+        channel === "whatsapp"
+          ? t("Test sent. Check WhatsApp on that phone.", "تم إرسال الاختبار. تحقق من واتساب على ذلك الهاتف.")
+          : t(
+              "Test sent. Check the inbox (and spam).",
+              "تم إرسال الاختبار. تحقق من البريد الوارد والبريد غير المرغوب فيه.",
+            ),
+      );
     } catch (e) {
       setTestResult(errorText(e));
     } finally {
@@ -327,125 +425,204 @@ export function SettingsScreen({
   return (
     <div className="page narrow-page">
       <PageHeader
-        eyebrow="Admin"
-        title="Settings"
-        description={canSettings ? "Online orders, notifications and your login." : "Your login."}
+        eyebrow={t("Admin", "الإدارة")}
+        title={t("Settings", "الإعدادات")}
+        description={
+          canSettings
+            ? t(
+                "Online orders, notifications and your login.",
+                "الطلبات الإلكترونية والإشعارات وبيانات دخولك.",
+              )
+            : t("Your login.", "بيانات دخولك.")
+        }
       />
       {s.error && <ErrorBanner message={s.error} onClose={() => s.setError("")} />}
-      {!s.data && !s.error && <p className="muted-text">Loading…</p>}
+      {!s.data && !s.error && <p className="muted-text">{t("Loading…", "جارٍ التحميل…")}</p>}
       {s.data && (
         <>
           {canSettings && shop && (
-          <>
-          <section className="form-section">
-            <div className="section-title">
-              <h2>Online orders</h2>
-              <p>When on, customers see an Add button on the menu and can order during opening hours.</p>
-            </div>
-            <SettingRow
-              title="Accept online orders"
-              toggle={
-                <Toggle
-                  checked={shop.ordersEnabled}
-                  onChange={(ordersEnabled) => s.update({ ordersEnabled })}
-                  label="Accept online orders"
-                />
-              }
-            >
-              {shop.ordersEnabled ? "On: the menu takes orders." : "Off: the menu is view-only."}
-            </SettingRow>
-            {shop.ordersEnabled && !shop.payments.some((p) => p.enabled) && (
-              <div className="info-banner">No payment method is turned on, so customers can&apos;t finish an order yet.</div>
-            )}
-          </section>
+            <>
+              <section className="form-section">
+                <div className="section-title">
+                  <h2>{t("Online orders", "الطلبات الإلكترونية")}</h2>
+                  <p>
+                    {t(
+                      "When on, customers see an Add button on the menu and can order during opening hours.",
+                      "عند التفعيل، يظهر زر إضافة في القائمة ويمكن للعملاء الطلب خلال ساعات العمل.",
+                    )}
+                  </p>
+                </div>
+                <SettingRow
+                  title={t("Accept online orders", "استقبال الطلبات الإلكترونية")}
+                  toggle={
+                    <Toggle
+                      checked={shop.ordersEnabled}
+                      onChange={(ordersEnabled) => s.update({ ordersEnabled })}
+                      label={t("Accept online orders", "استقبال الطلبات الإلكترونية")}
+                    />
+                  }
+                >
+                  {shop.ordersEnabled
+                    ? t("On: the menu takes orders.", "مفعّل: تستقبل القائمة الطلبات.")
+                    : t("Off: the menu is view-only.", "متوقف: القائمة للعرض فقط.")}
+                </SettingRow>
+                {shop.ordersEnabled && !shop.payments.some((p) => p.enabled) && (
+                  <div className="info-banner">
+                    {t(
+                      "No payment method is turned on, so customers can't finish an order yet.",
+                      "لم تُفعّل أي طريقة دفع، لذلك لا يمكن للعملاء إتمام الطلب بعد.",
+                    )}
+                  </div>
+                )}
+              </section>
 
-          <section className="form-section">
-            <div className="section-title">
-              <h2>Notifications</h2>
-              <p>Get a message for every new order. Save before sending a test.</p>
-            </div>
-            <SettingRow
-              title="WhatsApp"
-              toggle={
-                <Toggle
-                  checked={shop.whatsapp.enabled}
-                  onChange={(enabled) => s.update({ whatsapp: { ...shop.whatsapp, enabled } })}
-                  label="WhatsApp notifications"
-                />
-              }
-            >
-              Free, through CallMeBot. One-time setup: follow the steps on{" "}
-              <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noreferrer">
-                callmebot.com
-              </a>{" "}
-              from the phone that should get the orders, then paste the key it sends you below. This number
-              also receives the code if the sign-in PIN is forgotten.
-            </SettingRow>
-            <div className="form-grid">
-              <Field label="Phone number" hint="With country code, e.g. +961 71 123 456">
-                <input
-                  type="tel"
-                  value={shop.whatsapp.phone}
-                  onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, phone: e.target.value } })}
-                  placeholder="+961 …"
-                  disabled={!isAdmin}
-                  title={isAdmin ? undefined : "Only the super admin can change this number."}
-                />
-              </Field>
-              {isAdmin ? (
-                <Field label="CallMeBot key">
+              <section className="form-section">
+                <div className="section-title">
+                  <h2>{t("Notifications", "الإشعارات")}</h2>
+                  <p>
+                    {t(
+                      "Get a message for every new order. Save before sending a test.",
+                      "تلقَّ إشعارًا لكل طلب جديد. احفظ التغييرات قبل إرسال اختبار.",
+                    )}
+                  </p>
+                </div>
+                <SettingRow
+                  title={t("WhatsApp", "واتساب")}
+                  toggle={
+                    <Toggle
+                      checked={shop.whatsapp.enabled}
+                      onChange={(enabled) => s.update({ whatsapp: { ...shop.whatsapp, enabled } })}
+                      label={t("WhatsApp notifications", "إشعارات واتساب")}
+                    />
+                  }
+                >
+                  {t(
+                    "Free, through CallMeBot. One-time setup: follow the steps on",
+                    "مجانًا عبر CallMeBot. للإعداد مرة واحدة، اتبع الخطوات على",
+                  )}{" "}
+                  <a
+                    href="https://www.callmebot.com/blog/free-api-whatsapp-messages/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    callmebot.com
+                  </a>{" "}
+                  {t(
+                    "from the phone that should get the orders, then paste the key it sends you below. This number also receives the code if the sign-in PIN is forgotten.",
+                    "من الهاتف المخصّص لاستقبال الطلبات، ثم ألصق المفتاح الذي يصلك أدناه. يستقبل هذا الرقم أيضًا رمز الاستعادة عند نسيان رمز PIN.",
+                  )}
+                </SettingRow>
+                <div className="form-grid">
+                  <Field
+                    label={t("Phone number", "رقم الهاتف")}
+                    hint={t(
+                      "With country code, e.g. +961 71 123 456",
+                      "مع رمز الدولة، مثال: ‎+961 71 123 456",
+                    )}
+                  >
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      value={shop.whatsapp.phone}
+                      onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, phone: e.target.value } })}
+                      placeholder="+961 …"
+                      disabled={!isAdmin}
+                      title={
+                        isAdmin
+                          ? undefined
+                          : t(
+                              "Only the super admin can change this number.",
+                              "يمكن للمسؤول الرئيسي فقط تغيير هذا الرقم.",
+                            )
+                      }
+                    />
+                  </Field>
+                  {isAdmin ? (
+                    <Field label={t("CallMeBot key", "مفتاح CallMeBot")}>
+                      <input
+                        dir="ltr"
+                        value={shop.whatsapp.apiKey}
+                        onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, apiKey: e.target.value } })}
+                        autoComplete="off"
+                      />
+                    </Field>
+                  ) : (
+                    <p className="field-hint">
+                      {t(
+                        "Only the super admin can change the WhatsApp number and key.",
+                        "يمكن للمسؤول الرئيسي فقط تغيير رقم واتساب والمفتاح.",
+                      )}
+                    </p>
+                  )}
+                  {numberChanged && (
+                    <Field
+                      label={t("Your PIN", "رمز PIN الخاص بك")}
+                      required
+                      hint={t(
+                        "Needed to change the number or key, which receive PIN reset codes.",
+                        "مطلوب لتغيير الرقم أو المفتاح المستخدمَين لاستقبال رموز إعادة تعيين PIN.",
+                      )}
+                    >
+                      <PinInput value={whatsappPin} onChange={setWhatsappPin} autoComplete="off" />
+                    </Field>
+                  )}
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={s.dirty || testing !== null}
+                  onClick={() => test("whatsapp")}
+                >
+                  {testing === "whatsapp"
+                    ? t("Sending…", "جارٍ الإرسال…")
+                    : t("Send a test WhatsApp", "إرسال اختبار عبر واتساب")}
+                </Button>
+
+                <hr />
+                <SettingRow
+                  title={t("Email", "البريد الإلكتروني")}
+                  toggle={
+                    <Toggle
+                      checked={shop.email.enabled}
+                      onChange={(enabled) => s.update({ email: { ...shop.email, enabled } })}
+                      label={t("Email notifications", "إشعارات البريد الإلكتروني")}
+                    />
+                  }
+                >
+                  {s.data.emailReady
+                    ? t(
+                        "Each new order is emailed to this address.",
+                        "يُرسل كل طلب جديد إلى عنوان البريد هذا.",
+                      )
+                    : t(
+                        "Email isn't connected yet: add RESEND_API_KEY in Vercel (see README), then redeploy.",
+                        "البريد الإلكتروني غير متصل بعد: أضف RESEND_API_KEY في Vercel (راجع README)، ثم أعد النشر.",
+                      )}
+                </SettingRow>
+                <Field label={t("Email address", "عنوان البريد الإلكتروني")}>
                   <input
-                    value={shop.whatsapp.apiKey}
-                    onChange={(e) => s.update({ whatsapp: { ...shop.whatsapp, apiKey: e.target.value } })}
-                    autoComplete="off"
+                    type="email"
+                    dir="ltr"
+                    value={shop.email.address}
+                    onChange={(e) => s.update({ email: { ...shop.email, address: e.target.value } })}
+                    placeholder="name@example.com"
                   />
                 </Field>
-              ) : (
-                <p className="field-hint">Only the super admin can change the WhatsApp number and key.</p>
-              )}
-              {numberChanged && (
-                <Field label="Your PIN" required hint="Needed to change the number or key, which receive PIN reset codes.">
-                  <PinInput value={whatsappPin} onChange={setWhatsappPin} autoComplete="off" />
-                </Field>
-              )}
-            </div>
-            <Button variant="secondary" disabled={s.dirty || testing !== null} onClick={() => test("whatsapp")}>
-              {testing === "whatsapp" ? "Sending…" : "Send a test WhatsApp"}
-            </Button>
-
-            <hr />
-            <SettingRow
-              title="Email"
-              toggle={
-                <Toggle
-                  checked={shop.email.enabled}
-                  onChange={(enabled) => s.update({ email: { ...shop.email, enabled } })}
-                  label="Email notifications"
-                />
-              }
-            >
-              {s.data.emailReady
-                ? "Each new order is emailed to this address."
-                : "Email isn't connected yet: add RESEND_API_KEY in Vercel (see README), then redeploy."}
-            </SettingRow>
-            <Field label="Email address">
-              <input
-                type="email"
-                value={shop.email.address}
-                onChange={(e) => s.update({ email: { ...shop.email, address: e.target.value } })}
-                placeholder="name@example.com"
-              />
-            </Field>
-            <Button variant="secondary" disabled={s.dirty || testing !== null} onClick={() => test("email")}>
-              {testing === "email" ? "Sending…" : "Send a test email"}
-            </Button>
-            {testResult && (
-              <p className="field-hint" role="status">
-                {testResult}
-              </p>
-            )}
-          </section>
-          </>
+                <Button
+                  variant="secondary"
+                  disabled={s.dirty || testing !== null}
+                  onClick={() => test("email")}
+                >
+                  {testing === "email"
+                    ? t("Sending…", "جارٍ الإرسال…")
+                    : t("Send a test email", "إرسال بريد اختباري")}
+                </Button>
+                {testResult && (
+                  <p className="field-hint" role="status">
+                    {localizeError(testResult)}
+                  </p>
+                )}
+              </section>
+            </>
           )}
 
           {isAdmin ? (
@@ -465,18 +642,18 @@ export function SettingsScreen({
             <MyAccountSection username={s.data.username} onSaved={onSaved} />
           )}
           {canSettings && shop && (
-          <SaveBar
-            busy={s.busy}
-            dirty={s.dirty}
-            blocked={numberChanged && whatsappPin.length !== 4}
-            onSave={async () => {
-              if (await s.save(numberChanged ? whatsappPin : "")) setWhatsappPin("");
-            }}
-            onDiscard={() => {
-              s.discard();
-              setWhatsappPin("");
-            }}
-          />
+            <SaveBar
+              busy={s.busy}
+              dirty={s.dirty}
+              blocked={numberChanged && whatsappPin.length !== 4}
+              onSave={async () => {
+                if (await s.save(numberChanged ? whatsappPin : "")) setWhatsappPin("");
+              }}
+              onDiscard={() => {
+                s.discard();
+                setWhatsappPin("");
+              }}
+            />
           )}
         </>
       )}
@@ -485,11 +662,20 @@ export function SettingsScreen({
 }
 
 /** A 4-digit PIN box: digits only, number keypad on phones. */
-function PinInput({ value, onChange, autoComplete }: { value: string; onChange: (v: string) => void; autoComplete: string }) {
+function PinInput({
+  value,
+  onChange,
+  autoComplete,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete: string;
+}) {
   return (
     <input
       className="pin-input small"
       type="password"
+      dir="ltr"
       inputMode="numeric"
       pattern="[0-9]{4}"
       maxLength={4}
@@ -500,7 +686,16 @@ function PinInput({ value, onChange, autoComplete }: { value: string; onChange: 
   );
 }
 
-function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet: boolean; onSaved: (m: string) => void }) {
+function AccountSection({
+  data,
+  pinSet,
+  onSaved,
+}: {
+  data: SettingsData;
+  pinSet: boolean;
+  onSaved: (m: string) => void;
+}) {
+  const { t, localizeError } = useAdminLanguage();
   const [username, setUsername] = useState(data.username);
   const [currentPassword, setCurrent] = useState("");
   const [currentPin, setCurrentPin] = useState("");
@@ -511,7 +706,8 @@ function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet:
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirm) return setError("The two new passwords don't match.");
+    if (newPassword !== confirm)
+      return setError(t("The two new passwords don't match.", "كلمتا المرور الجديدتان غير متطابقتين."));
     setBusy(true);
     setError("");
     try {
@@ -520,7 +716,14 @@ function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet:
       setCurrentPin("");
       setNew("");
       setConfirm("");
-      onSaved(newPassword ? "Login updated. Other devices are signed out." : "Username updated.");
+      onSaved(
+        newPassword
+          ? t(
+              "Login updated. Other devices are signed out.",
+              "تم تحديث بيانات الدخول وتسجيل خروج الأجهزة الأخرى.",
+            )
+          : t("Username updated.", "تم تحديث اسم المستخدم."),
+      );
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -531,44 +734,78 @@ function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet:
   return (
     <form className="form-section" onSubmit={submit}>
       <div className="section-title">
-        <h2>Admin login</h2>
+        <h2>{t("Admin login", "تسجيل دخول المسؤول")}</h2>
         <p>
           {data.passwordInDatabase
-            ? "Change the username or password used to sign in here."
-            : "The password is currently the one set in Vercel (ADMIN_PASSWORD). Once you change it here, the new one is used instead."}
+            ? t(
+                "Change the username or password used to sign in here.",
+                "غيّر اسم المستخدم أو كلمة المرور المستخدمة لتسجيل الدخول هنا.",
+              )
+            : t(
+                "The password is currently the one set in Vercel (ADMIN_PASSWORD). Once you change it here, the new one is used instead.",
+                "تُستخدم حاليًا كلمة المرور المحددة في Vercel ‏(ADMIN_PASSWORD). عند تغييرها هنا، ستُستخدم كلمة المرور الجديدة.",
+              )}
         </p>
       </div>
       {error && (
         <p className="error-text" role="alert">
-          {error}
+          {localizeError(error)}
         </p>
       )}
       <div className="form-grid">
-        <Field label="Username" required>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+        <Field label={t("Username", "اسم المستخدم")} required>
+          <input
+            dir="ltr"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
         </Field>
-        <Field label="Current password" required>
+        <Field label={t("Current password", "كلمة المرور الحالية")} required>
           <input
             type="password"
+            dir="ltr"
             value={currentPassword}
             onChange={(e) => setCurrent(e.target.value)}
             autoComplete="current-password"
           />
         </Field>
         {pinSet && (
-          <Field label="PIN" required>
+          <Field label={t("PIN", "رمز PIN")} required>
             <PinInput value={currentPin} onChange={setCurrentPin} autoComplete="off" />
           </Field>
         )}
-        <Field label="New password" hint="At least 10 characters, not containing the username. Leave empty to keep the current one.">
-          <input type="password" value={newPassword} onChange={(e) => setNew(e.target.value)} autoComplete="new-password" />
+        <Field
+          label={t("New password", "كلمة مرور جديدة")}
+          hint={t(
+            "At least 10 characters, not containing the username. Leave empty to keep the current one.",
+            "10 أحرف على الأقل، دون اسم المستخدم. اتركه فارغًا للإبقاء على كلمة المرور الحالية.",
+          )}
+        >
+          <input
+            type="password"
+            dir="ltr"
+            value={newPassword}
+            onChange={(e) => setNew(e.target.value)}
+            autoComplete="new-password"
+          />
         </Field>
-        <Field label="Repeat new password">
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+        <Field label={t("Repeat new password", "تأكيد كلمة المرور الجديدة")}>
+          <input
+            type="password"
+            dir="ltr"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+          />
         </Field>
       </div>
-      <button type="submit" className="button primary" disabled={busy || !currentPassword || (pinSet && currentPin.length !== 4)}>
-        {busy ? "Updating…" : "Update login"}
+      <button
+        type="submit"
+        className="button primary"
+        disabled={busy || !currentPassword || (pinSet && currentPin.length !== 4)}
+      >
+        {busy ? t("Updating…", "جارٍ التحديث…") : t("Update login", "تحديث بيانات الدخول")}
       </button>
     </form>
   );
@@ -576,17 +813,23 @@ function AccountSection({ data, pinSet, onSaved }: { data: SettingsData; pinSet:
 
 /** "Sign out all devices": for a lost phone or a shared computer. */
 function DevicesSection({ onSaved }: { onSaved: (m: string) => void }) {
+  const { t, localizeError } = useAdminLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <section className="form-section">
       <div className="section-title">
-        <h2>Signed-in devices</h2>
-        <p>Lost a phone, or signed in on someone else&apos;s computer? Sign out everywhere; this device stays signed in.</p>
+        <h2>{t("Signed-in devices", "الأجهزة المسجّل دخولها")}</h2>
+        <p>
+          {t(
+            "Lost a phone, or signed in on someone else's computer? Sign out everywhere; this device stays signed in.",
+            "فقدت هاتفك أو سجّلت الدخول على جهاز شخص آخر؟ سجّل خروج الأجهزة الأخرى، وسيبقى هذا الجهاز مسجّلًا.",
+          )}
+        </p>
       </div>
       {error && (
         <p className="error-text" role="alert">
-          {error}
+          {localizeError(error)}
         </p>
       )}
       <Button
@@ -597,7 +840,7 @@ function DevicesSection({ onSaved }: { onSaved: (m: string) => void }) {
           setError("");
           try {
             await signOutAllDevices();
-            onSaved("Every other device is signed out.");
+            onSaved(t("Every other device is signed out.", "تم تسجيل خروج جميع الأجهزة الأخرى."));
           } catch (e) {
             setError(errorText(e));
           } finally {
@@ -605,13 +848,16 @@ function DevicesSection({ onSaved }: { onSaved: (m: string) => void }) {
           }
         }}
       >
-        {busy ? "Signing out…" : "Sign out all other devices"}
+        {busy
+          ? t("Signing out…", "جارٍ تسجيل الخروج…")
+          : t("Sign out all other devices", "تسجيل خروج جميع الأجهزة الأخرى")}
       </Button>
     </section>
   );
 }
 
 function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string) => void }) {
+  const { t, localizeError } = useAdminLanguage();
   const [currentPassword, setCurrent] = useState("");
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -621,7 +867,9 @@ function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const problem = pinProblem(newPin) ?? (newPin !== confirm ? "The two new PINs don't match." : null);
+    const problem =
+      pinProblem(newPin) ??
+      (newPin !== confirm ? t("The two new PINs don't match.", "رمزا PIN الجديدان غير متطابقين.") : null);
     if (problem) return setError(problem);
     setBusy(true);
     setError("");
@@ -631,7 +879,14 @@ function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string)
       setCurrentPin("");
       setNewPin("");
       setConfirm("");
-      onSaved(pinSet ? "PIN changed. Other devices are signed out." : "PIN created. It's now asked for at every sign-in.");
+      onSaved(
+        pinSet
+          ? t("PIN changed. Other devices are signed out.", "تم تغيير رمز PIN وتسجيل خروج الأجهزة الأخرى.")
+          : t(
+              "PIN created. It's now asked for at every sign-in.",
+              "تم إنشاء رمز PIN. سيُطلب عند كل تسجيل دخول.",
+            ),
+      );
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -642,43 +897,76 @@ function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string)
   return (
     <form className="form-section" onSubmit={submit}>
       <div className="section-title">
-        <h2>Sign-in PIN</h2>
+        <h2>{t("Sign-in PIN", "رمز PIN لتسجيل الدخول")}</h2>
         <p>
           {pinSet
-            ? "After the password, the admin asks for this 4-digit PIN. It's also needed to change the login."
-            : "Add a 4-digit PIN as a second step after the password. Recommended: it keeps the admin safe even if the password leaks."}
+            ? t(
+                "After the password, the admin asks for this 4-digit PIN. It's also needed to change the login.",
+                "يُطلب رمز PIN المكوّن من 4 أرقام بعد كلمة المرور. وهو مطلوب أيضًا لتغيير بيانات الدخول.",
+              )
+            : t(
+                "Add a 4-digit PIN as a second step after the password. Recommended: it keeps the admin safe even if the password leaks.",
+                "أضف رمز PIN من 4 أرقام كخطوة ثانية بعد كلمة المرور. يُنصح به لحماية لوحة الإدارة حتى عند تسرّب كلمة المرور.",
+              )}
         </p>
       </div>
-      {!pinSet && <div className="info-banner">No PIN yet. Anyone with the password can open the admin.</div>}
+      {!pinSet && (
+        <div className="info-banner">
+          {t(
+            "No PIN yet. Anyone with the password can open the admin.",
+            "لم يُضف رمز PIN بعد. يمكن لأي شخص لديه كلمة المرور فتح لوحة الإدارة.",
+          )}
+        </div>
+      )}
       {error && (
         <p className="error-text" role="alert">
-          {error}
+          {localizeError(error)}
         </p>
       )}
       <div className="form-grid">
-        <Field label="Current password" required>
-          <input type="password" value={currentPassword} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        <Field label={t("Current password", "كلمة المرور الحالية")} required>
+          <input
+            type="password"
+            dir="ltr"
+            value={currentPassword}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+          />
         </Field>
         {pinSet ? (
-          <Field label="Current PIN" required>
+          <Field label={t("Current PIN", "رمز PIN الحالي")} required>
             <PinInput value={currentPin} onChange={setCurrentPin} autoComplete="off" />
           </Field>
         ) : (
           <span aria-hidden />
         )}
-        <Field label={pinSet ? "New PIN" : "PIN"} required hint="4 digits. Not 0000, 1234 or similar.">
+        <Field
+          label={pinSet ? t("New PIN", "رمز PIN الجديد") : t("PIN", "رمز PIN")}
+          required
+          hint={t("4 digits. Not 0000, 1234 or similar.", "4 أرقام. تجنّب 0000 أو 1234 وما شابه.")}
+        >
           <PinInput value={newPin} onChange={setNewPin} autoComplete="new-password" />
         </Field>
-        <Field label="Repeat the PIN" required>
+        <Field label={t("Repeat the PIN", "تأكيد رمز PIN")} required>
           <PinInput value={confirm} onChange={setConfirm} autoComplete="new-password" />
         </Field>
       </div>
       <button
         type="submit"
         className="button primary"
-        disabled={busy || !currentPassword || (pinSet && currentPin.length !== 4) || newPin.length !== 4 || confirm.length !== 4}
+        disabled={
+          busy ||
+          !currentPassword ||
+          (pinSet && currentPin.length !== 4) ||
+          newPin.length !== 4 ||
+          confirm.length !== 4
+        }
       >
-        {busy ? "Saving…" : pinSet ? "Change PIN" : "Create PIN"}
+        {busy
+          ? t("Saving…", "جارٍ الحفظ…")
+          : pinSet
+            ? t("Change PIN", "تغيير رمز PIN")
+            : t("Create PIN", "إنشاء رمز PIN")}
       </button>
     </form>
   );
@@ -687,6 +975,7 @@ function PinSection({ pinSet, onSaved }: { pinSet: boolean; onSaved: (m: string)
 /* ---------- Staff: their own password ---------- */
 
 function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m: string) => void }) {
+  const { t, localizeError } = useAdminLanguage();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -694,7 +983,8 @@ function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m
   const [busy, setBusy] = useState(false);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (next !== confirm) return setError("The two new passwords don't match.");
+    if (next !== confirm)
+      return setError(t("The two new passwords don't match.", "كلمتا المرور الجديدتان غير متطابقتين."));
     setBusy(true);
     setError("");
     try {
@@ -702,7 +992,12 @@ function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m
       setCurrent("");
       setNext("");
       setConfirm("");
-      onSaved("Password changed. Your other devices are signed out.");
+      onSaved(
+        t(
+          "Password changed. Your other devices are signed out.",
+          "تم تغيير كلمة المرور وتسجيل خروج أجهزتك الأخرى.",
+        ),
+      );
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -712,30 +1007,59 @@ function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m
   return (
     <form className="form-section" onSubmit={submit}>
       <div className="section-title">
-        <h2>My account</h2>
+        <h2>{t("My account", "حسابي")}</h2>
         <p>
-          Signed in as <b>{username}</b>. To change your username or access, ask the super admin.
+          {t("Signed in as", "مسجّل الدخول باسم")} <b dir="ltr">{username}</b>
+          {t(
+            ". To change your username or access, ask the super admin.",
+            ". لتغيير اسم المستخدم أو الصلاحيات، تواصل مع المسؤول الرئيسي.",
+          )}
         </p>
       </div>
       {error && (
         <p className="error-text" role="alert">
-          {error}
+          {localizeError(error)}
         </p>
       )}
       <div className="form-grid">
-        <Field label="Current password" required>
-          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        <Field label={t("Current password", "كلمة المرور الحالية")} required>
+          <input
+            type="password"
+            dir="ltr"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+          />
         </Field>
         <span aria-hidden />
-        <Field label="New password" required hint="At least 10 characters, not containing your username.">
-          <input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+        <Field
+          label={t("New password", "كلمة مرور جديدة")}
+          required
+          hint={t(
+            "At least 10 characters, not containing your username.",
+            "10 أحرف على الأقل، دون اسم المستخدم الخاص بك.",
+          )}
+        >
+          <input
+            type="password"
+            dir="ltr"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            autoComplete="new-password"
+          />
         </Field>
-        <Field label="Repeat new password" required>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+        <Field label={t("Repeat new password", "تأكيد كلمة المرور الجديدة")} required>
+          <input
+            type="password"
+            dir="ltr"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+          />
         </Field>
       </div>
       <button type="submit" className="button primary" disabled={busy || !current || !next || !confirm}>
-        {busy ? "Saving…" : "Change password"}
+        {busy ? t("Saving…", "جارٍ الحفظ…") : t("Change password", "تغيير كلمة المرور")}
       </button>
     </form>
   );
@@ -744,18 +1068,38 @@ function MyAccountSection({ username, onSaved }: { username: string; onSaved: (m
 /* ---------- Super admin: staff accounts ---------- */
 
 function PageChecks({ value, onChange }: { value: Page[]; onChange: (pages: Page[]) => void }) {
+  const { t } = useAdminLanguage();
   return (
-    <div className="page-checks" role="group" aria-label="Pages this person can open">
+    <div
+      className="page-checks"
+      role="group"
+      aria-label={t("Pages this person can open", "الصفحات المتاحة لهذا الشخص")}
+    >
       {PAGES.map((p) => (
         <label key={p}>
           <input
             type="checkbox"
             checked={value.includes(p)}
             onChange={() =>
-              onChange(value.includes(p) ? value.filter((x) => x !== p) : PAGES.filter((x) => x === p || value.includes(x)))
+              onChange(
+                value.includes(p)
+                  ? value.filter((x) => x !== p)
+                  : PAGES.filter((x) => x === p || value.includes(x)),
+              )
             }
           />
-          {PAGE_LABELS[p]}
+          {t(
+            PAGE_LABELS[p],
+            {
+              items: "أصناف القائمة",
+              sections: "الأقسام",
+              shop: "معلومات المتجر",
+              orders: "الطلبات",
+              stats: "الإحصاءات",
+              payments: "طرق الدفع",
+              settings: "الإعدادات",
+            }[p],
+          )}
         </label>
       ))}
     </div>
@@ -783,43 +1127,57 @@ function downloadCredentials(c: NewCredentials) {
 
 /** Shown once after creating an account or setting a password: the server can't show it again. */
 function CredentialsCard({ creds, onClose }: { creds: NewCredentials; onClose: () => void }) {
+  const { t } = useAdminLanguage();
   return (
     <div className="credentials-card" role="status">
       <p>
-        <b>Sign-in details for {creds.username}</b> — shown only now. Download the PDF and give it to them privately.
+        <b>{t(`Sign-in details for ${creds.username}`, `بيانات الدخول لـ ${creds.username}`)}</b>
+        {t(
+          " — shown only now. Download the PDF and give it to them privately.",
+          " — تظهر الآن فقط. نزّل ملف PDF وسلّمه لصاحبه بشكل خاص.",
+        )}
       </p>
       <dl>
-        <dt>Username</dt>
-        <dd>{creds.username}</dd>
-        <dt>Password</dt>
-        <dd>{creds.password}</dd>
+        <dt>{t("Username", "اسم المستخدم")}</dt>
+        <dd dir="ltr">{creds.username}</dd>
+        <dt>{t("Password", "كلمة المرور")}</dt>
+        <dd dir="ltr">{creds.password}</dd>
       </dl>
       <div>
-        <Button onClick={() => downloadCredentials(creds)}>Download PDF</Button>
+        <Button onClick={() => downloadCredentials(creds)}>{t("Download PDF", "تنزيل PDF")}</Button>
         <Button variant="ghost" onClick={onClose}>
-          Done
+          {t("Done", "تم")}
         </Button>
       </div>
     </div>
   );
 }
 
-const ago = (iso: string) => {
+const ago = (iso: string, locale: string) => {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 60) return `${Math.max(1, minutes)} min ago`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
-  return `${Math.round(minutes / (60 * 24))} days ago`;
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+  if (minutes < 60) return relative.format(-Math.max(1, minutes), "minute");
+  if (minutes < 60 * 24) return relative.format(-Math.round(minutes / 60), "hour");
+  return relative.format(-Math.round(minutes / (60 * 24)), "day");
 };
 
-/** "Online now", "Signed out 2 h ago", "Last seen 5 days ago" or "Never signed in". */
-function presence(s: StaffAccount) {
-  if (s.online) return { online: true, text: "Online now" };
-  if (s.lastSignout && (!s.lastSeen || s.lastSignout >= s.lastSeen)) return { online: false, text: `Signed out ${ago(s.lastSignout)}` };
-  if (s.lastSeen) return { online: false, text: `Last seen ${ago(s.lastSeen)}` };
-  return { online: false, text: "Never signed in" };
+function presence(s: StaffAccount, t: (english: string, arabic: string) => string, locale: string) {
+  if (s.online) return { online: true, text: t("Online now", "متصل الآن") };
+  if (s.lastSignout && (!s.lastSeen || s.lastSignout >= s.lastSeen))
+    return {
+      online: false,
+      text: t(`Signed out ${ago(s.lastSignout, locale)}`, `تم تسجيل الخروج ${ago(s.lastSignout, locale)}`),
+    };
+  if (s.lastSeen)
+    return {
+      online: false,
+      text: t(`Last seen ${ago(s.lastSeen, locale)}`, `آخر ظهور ${ago(s.lastSeen, locale)}`),
+    };
+  return { online: false, text: t("Never signed in", "لم يسجّل الدخول بعد") };
 }
 
 function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
+  const { t, localizeError } = useAdminLanguage();
   const [staff, setStaff] = useState<StaffAccount[] | null>(null);
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
@@ -860,27 +1218,36 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
       setUsername("");
       setPassword(generatePassword());
       setPages(STAFF_DEFAULT);
-      onSaved(`Account "${row.username}" created. Download the PDF with their sign-in details.`);
+      onSaved(
+        t(
+          `Account "${row.username}" created. Download the PDF with their sign-in details.`,
+          `تم إنشاء الحساب "${row.username}". نزّل ملف PDF الذي يحتوي على بيانات الدخول.`,
+        ),
+      );
     });
   };
 
   return (
     <section className="form-section">
       <div className="section-title">
-        <h2>Staff accounts</h2>
+        <h2>{t("Staff accounts", "حسابات الموظفين")}</h2>
         <p>
-          Staff sign in on this same page with their own username and password, and only see the pages you tick. They
-          can never manage staff or change your login, PIN or the WhatsApp number.
+          {t(
+            "Staff sign in on this same page with their own username and password, and only see the pages you tick. They can never manage staff or change your login, PIN or the WhatsApp number.",
+            "يسجّل الموظفون الدخول من هذه الصفحة باستخدام اسم المستخدم وكلمة المرور الخاصين بهم، ويرون الصفحات التي تحددها فقط. لا يمكنهم إدارة الموظفين أو تغيير بيانات دخولك أو رمز PIN أو رقم واتساب.",
+          )}
         </p>
       </div>
       {error && (
         <p className="error-text" role="alert">
-          {error}
+          {localizeError(error)}
         </p>
       )}
       {creds && <CredentialsCard creds={creds} onClose={() => setCreds(null)} />}
-      {!staff && !error && <p className="muted-text">Loading…</p>}
-      {staff?.length === 0 && <p className="muted-text">No staff accounts yet.</p>}
+      {!staff && !error && <p className="muted-text">{t("Loading…", "جارٍ التحميل…")}</p>}
+      {staff?.length === 0 && (
+        <p className="muted-text">{t("No staff accounts yet.", "لا توجد حسابات موظفين بعد.")}</p>
+      )}
       <div className="staff-list">
         {staff?.map((s) => (
           <StaffRow
@@ -897,27 +1264,49 @@ function StaffSection({ onSaved }: { onSaved: (m: string) => void }) {
       </div>
 
       <form className="staff-add" onSubmit={add}>
-        <h3>Add a staff member</h3>
+        <h3>{t("Add a staff member", "إضافة موظف")}</h3>
         <div className="form-grid">
-          <Field label="Username" required hint="3–40 letters, numbers, dots, dashes or underscores.">
+          <Field
+            label={t("Username", "اسم المستخدم")}
+            required
+            hint={t(
+              "3–40 letters, numbers, dots, dashes or underscores.",
+              "من 3 إلى 40 حرفًا أو رقمًا أو نقطة أو شرطة أو شرطة سفلية.",
+            )}
+          >
             <input
+              dir="ltr"
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
               autoComplete="off"
               autoCapitalize="none"
             />
           </Field>
-          <Field label="Password" required hint="Made for you; you can also type your own (10+ characters).">
-            <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" spellCheck={false} />
+          <Field
+            label={t("Password", "كلمة المرور")}
+            required
+            hint={t(
+              "Made for you; you can also type your own (10+ characters).",
+              "أُنشئت لك تلقائيًا؛ يمكنك كتابة كلمة مرور من اختيارك (10 أحرف على الأقل).",
+            )}
+          >
+            <input
+              type="text"
+              dir="ltr"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
           </Field>
         </div>
         <button type="button" className="inline-link" onClick={() => setPassword(generatePassword())}>
-          Generate another password
+          {t("Generate another password", "إنشاء كلمة مرور أخرى")}
         </button>
-        <span className="field-label">Pages they can open</span>
+        <span className="field-label">{t("Pages they can open", "الصفحات المتاحة لهم")}</span>
         <PageChecks value={pages} onChange={setPages} />
         <button type="submit" className="button primary" disabled={busy || !username || !password}>
-          {busy ? "Saving…" : "Create account"}
+          {busy ? t("Saving…", "جارٍ الحفظ…") : t("Create account", "إنشاء حساب")}
         </button>
       </form>
     </section>
@@ -941,15 +1330,18 @@ function StaffRow({
   onSaved: (m: string) => void;
   onCredentials: (c: NewCredentials) => void;
 }) {
+  const { t, locale } = useAdminLanguage();
   const [pages, setPages] = useState(s.pages);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const status = presence(s);
+  const status = presence(s, t, locale);
   const changed = pages.join() !== s.pages.join();
   return (
     <div className={`staff-row ${s.active ? "" : "disabled"}`}>
       <div className="staff-row-head">
         <b>{s.username}</b>
-        <span className={`status-badge ${s.active ? "accepted" : ""}`}>{s.active ? "Active" : "Stopped"}</span>
+        <span className={`status-badge ${s.active ? "accepted" : ""}`}>
+          {s.active ? t("Active", "نشط") : t("Stopped", "متوقف")}
+        </span>
         <span className={`presence ${status.online ? "online" : ""}`}>{status.text}</span>
       </div>
       <PageChecks value={pages} onChange={setPages} />
@@ -960,11 +1352,16 @@ function StaffRow({
           onClick={() =>
             run(async () => {
               onChange(await updateStaff({ id: s.id, pages }));
-              onSaved(`Access for "${s.username}" saved. They're signed out and see the new pages next time.`);
+              onSaved(
+                t(
+                  `Access for "${s.username}" saved. They're signed out and see the new pages next time.`,
+                  `تم حفظ صلاحيات "${s.username}" وتسجيل خروجه. ستظهر الصفحات الجديدة عند دخوله مجددًا.`,
+                ),
+              );
             })
           }
         >
-          Save access
+          {t("Save access", "حفظ الصلاحيات")}
         </Button>
         <Button
           variant="secondary"
@@ -974,23 +1371,39 @@ function StaffRow({
               const password = generatePassword();
               onChange(await updateStaff({ id: s.id, password }));
               onCredentials({ username: s.username, password, pages: s.pages });
-              onSaved(`New password set for "${s.username}". They're signed out. Download the PDF above.`);
+              onSaved(
+                t(
+                  `New password set for "${s.username}". They're signed out. Download the PDF above.`,
+                  `تم تعيين كلمة مرور جديدة لـ "${s.username}" وتسجيل خروجه. نزّل ملف PDF أعلاه.`,
+                ),
+              );
             })
           }
         >
-          New password + PDF
+          {t("New password + PDF", "كلمة مرور جديدة + PDF")}
         </Button>
         <Button
           variant="secondary"
-          disabled={busy || !s.active || !(s.online || (s.lastSeen && (!s.lastSignout || s.lastSeen > s.lastSignout)))}
+          disabled={
+            busy || !s.active || !(s.online || (s.lastSeen && (!s.lastSignout || s.lastSeen > s.lastSignout)))
+          }
           onClick={() =>
             run(async () => {
-              onChange({ ...(await updateStaff({ id: s.id, signOut: true })), online: false, lastSignout: new Date().toISOString() });
-              onSaved(`"${s.username}" is signed out. They can sign in again with their password.`);
+              onChange({
+                ...(await updateStaff({ id: s.id, signOut: true })),
+                online: false,
+                lastSignout: new Date().toISOString(),
+              });
+              onSaved(
+                t(
+                  `"${s.username}" is signed out. They can sign in again with their password.`,
+                  `تم تسجيل خروج "${s.username}". يمكنه الدخول مجددًا بكلمة المرور الخاصة به.`,
+                ),
+              );
             })
           }
         >
-          Sign out now
+          {t("Sign out now", "تسجيل الخروج الآن")}
         </Button>
         <Button
           variant="secondary"
@@ -1000,13 +1413,16 @@ function StaffRow({
               onChange({ ...(await updateStaff({ id: s.id, active: !s.active })), online: false });
               onSaved(
                 s.active
-                  ? `"${s.username}" is stopped and signed out. They can't sign in until you restart the account.`
-                  : `"${s.username}" can sign in again.`,
+                  ? t(
+                      `"${s.username}" is stopped and signed out. They can't sign in until you restart the account.`,
+                      `تم إيقاف "${s.username}" وتسجيل خروجه. لا يمكنه الدخول حتى تعيد تفعيل الحساب.`,
+                    )
+                  : t(`"${s.username}" can sign in again.`, `يمكن لـ "${s.username}" الدخول مجددًا.`),
               );
             })
           }
         >
-          {s.active ? "Stop account" : "Restart account"}
+          {s.active ? t("Stop account", "إيقاف الحساب") : t("Restart account", "إعادة تفعيل الحساب")}
         </Button>
         <Button
           variant={confirmDelete ? "danger" : "ghost"}
@@ -1016,11 +1432,11 @@ function StaffRow({
             run(async () => {
               await deleteStaff(s.id);
               onDeleted();
-              onSaved(`"${s.username}" deleted.`);
+              onSaved(t(`"${s.username}" deleted.`, `تم حذف "${s.username}".`));
             });
           }}
         >
-          {confirmDelete ? "Tap again to delete" : "Delete"}
+          {confirmDelete ? t("Tap again to delete", "اضغط مرة أخرى للحذف") : t("Delete", "حذف")}
         </Button>
       </div>
     </div>

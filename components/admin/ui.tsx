@@ -3,6 +3,8 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import type { Tag } from "@/data/menu";
 import type { DraftItem } from "@/lib/admin/draft";
+import { dictionaries, pick } from "@/lib/i18n";
+import { useAdminLanguage } from "./Language";
 
 export const TAG_LABELS: Record<Tag, string> = {
   vegetarian: "Vegetarian",
@@ -118,7 +120,7 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     settings: (
       <>
         <circle cx="12" cy="12" r="3" />
-        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+        <path d="M10 3h4l.5 3 1.5 1 3-1 2 3.5-2.5 2v1l2.5 2-2 3.5-3-1-1.5 1-.5 3h-4l-.5-3L8 17l-3 1-2-3.5 2.5-2v-1L3 9.5 5 6l3 1 1.5-1 .5-3Z" />
       </>
     ),
     bell: (
@@ -182,11 +184,12 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  const { t } = useAdminLanguage();
   return (
     <label className="field">
       <span className="field-label">
         {label}
-        {required && <b>Required</b>}
+        {required && <b>{t("Required", "مطلوب")}</b>}
       </span>
       {children}
       {hint && <span className="field-hint">{hint}</span>}
@@ -281,10 +284,11 @@ export function PageHeader({
   description: string;
   actions?: ReactNode;
 }) {
+  const { t } = useAdminLanguage();
   return (
     <header className="page-header">
       <div>
-        <span className="eyebrow">{eyebrow}</span>
+        <span className="eyebrow">{eyebrow === "Menu" ? t("Menu", "القائمة") : eyebrow}</span>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
@@ -295,6 +299,7 @@ export function PageHeader({
 
 /** The item photo on the brown tile, or a beige tile when there is none (or it fails to load). */
 export function Thumbnail({ item, name }: { item: Pick<DraftItem, "image" | "preview">; name: string }) {
+  const { t } = useAdminLanguage();
   const src = item.preview || item.image;
   const [failed, setFailed] = useState<string | null>(null);
   if (src && failed !== src)
@@ -305,19 +310,24 @@ export function Thumbnail({ item, name }: { item: Pick<DraftItem, "image" | "pre
       </div>
     );
   return (
-    <div className="thumbnail" role="img" aria-label={`${name || "Item"} has no photo`}>
+    <div
+      className="thumbnail"
+      role="img"
+      aria-label={t(`${name || "Item"} has no photo`, `لا توجد صورة لـ${name || "الصنف"}`)}
+    >
       <Icon name="image" size={22} />
     </div>
   );
 }
 
 export function Tags({ values, addon }: { values: Tag[]; addon?: boolean }) {
+  const { lang, t } = useAdminLanguage();
   return (
     <div className="tags">
-      {addon && <span className="tag addon">Add-on</span>}
+      {addon && <span className="tag addon">{t("Add-on", "إضافة")}</span>}
       {values.map((tag) => (
         <span className="tag" key={tag}>
-          {TAG_LABELS[tag] ?? tag}
+          {dictionaries[lang].tags[tag] ?? tag}
         </span>
       ))}
     </div>
@@ -327,17 +337,25 @@ export function Tags({ values, addon }: { values: Tag[]; addon?: boolean }) {
 export const formatLbp = (digits: string) => Number(digits || 0).toLocaleString("en-US");
 
 export function ItemPrice({ item }: { item: DraftItem }) {
+  const { lang, t } = useAdminLanguage();
   if (item.sizes.length)
-    return <>{item.sizes.map((s) => `${s.size} ${formatLbp(s.price)} L.L`).join(" · ")}</>;
-  if (!item.price) return <span className="missing">Price missing</span>;
+    return (
+      <>
+        {item.sizes
+          .map((s) => `${pick(lang, s.size, s.sizeAr)} ${formatLbp(s.price)} ${t("L.L", "ل.ل")}`)
+          .join(" · ")}
+      </>
+    );
+  if (!item.price) return <span className="missing">{t("Price missing", "السعر غير محدّد")}</span>;
   return (
     <>
-      {formatLbp(item.price)} <small className="currency-label">L.L</small>
+      {formatLbp(item.price)} <small className="currency-label">{t("L.L", "ل.ل")}</small>
     </>
   );
 }
 
 export function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  const { lang, t, localizeError } = useAdminLanguage();
   useEffect(() => {
     const t = setTimeout(onClose, 8000);
     return () => clearTimeout(t);
@@ -347,11 +365,11 @@ export function Toast({ message, onClose }: { message: string; onClose: () => vo
       <span>
         <Icon name="check" />
       </span>
-      <p>{message}</p>
-      <a href="/menu" target="_blank" rel="noreferrer">
-        View menu ↗
+      <p>{localizeError(message)}</p>
+      <a href={lang === "ar" ? "/ar/menu" : "/menu"} target="_blank" rel="noreferrer">
+        {t("View menu ↗", "عرض القائمة ↗")}
       </a>
-      <button type="button" onClick={onClose} aria-label="Close notification">
+      <button type="button" onClick={onClose} aria-label={t("Close notification", "إغلاق التنبيه")}>
         <Icon name="close" />
       </button>
     </div>
@@ -367,12 +385,13 @@ export function ErrorBanner({
   onFix?: () => void;
   onClose: () => void;
 }) {
-  const lines = message.split("\n").filter(Boolean);
+  const { t, localizeError } = useAdminLanguage();
+  const lines = localizeError(message).split("\n").filter(Boolean);
   return (
     <div className="error-banner" role="alert">
       <Icon name="warning" />
       <p>
-        <b>Couldn&apos;t publish:</b> {lines[0]}
+        <b>{t("Something went wrong:", "حدث خطأ:")}</b> {lines[0]}
         {lines.length > 1 && (
           <ul>
             {lines.slice(1).map((l) => (
@@ -383,10 +402,10 @@ export function ErrorBanner({
       </p>
       {onFix && (
         <button type="button" onClick={onFix}>
-          Fix it
+          {t("Fix it", "إصلاح")}
         </button>
       )}
-      <button type="button" className="dismiss" onClick={onClose} aria-label="Dismiss">
+      <button type="button" className="dismiss" onClick={onClose} aria-label={t("Dismiss", "إغلاق")}>
         <Icon name="close" />
       </button>
     </div>

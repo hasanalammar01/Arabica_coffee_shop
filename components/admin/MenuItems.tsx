@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { emptyItem, newKey, type DraftItem, type DraftSection } from "@/lib/admin/draft";
 import type { Editing, Publish } from "./AdminApp";
+import { useAdminLanguage } from "./Language";
 import { Button, ErrorBanner, Icon, ItemPrice, Modal, PageHeader, Tags, Thumbnail } from "./ui";
 
 type Props = {
@@ -14,6 +15,13 @@ type Props = {
 };
 
 export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Props) {
+  const { lang, t } = useAdminLanguage();
+  const displayName = (entry: { name: string; nameAr: string }) =>
+    lang === "ar" && entry.nameAr ? entry.nameAr : entry.name;
+  const displayOptions = (item: DraftItem) =>
+    item.options
+      .map((option, index) => (lang === "ar" ? item.optionsAr[index] || option : option))
+      .join(" · ");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   // Reordering is kept here until "Publish", so several moves make one change.
@@ -31,7 +39,12 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
   const q = query.trim().toLowerCase();
   const groups = shown
     .filter((s) => filter === "all" || s.key === filter)
-    .map((s) => ({ section: s, items: s.items.filter((i) => !q || i.name.toLowerCase().includes(q)) }))
+    .map((s) => ({
+      section: s,
+      items: s.items.filter(
+        (i) => !q || i.name.toLowerCase().includes(q) || i.nameAr.toLowerCase().includes(q),
+      ),
+    }))
     .filter((g) => g.items.length);
 
   const move = (sectionKey: string, index: number, offset: number) =>
@@ -71,8 +84,12 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
 
   const heading = (s: DraftSection, count: number) => (
     <div className="group-heading">
-      <b>{s.name}</b>
-      <span>{count === s.items.length ? `${count} items` : `${count} of ${s.items.length}`}</span>
+      <b>{displayName(s)}</b>
+      <span>
+        {count === s.items.length
+          ? t(`${count} items`, `${count} صنف`)
+          : t(`${count} of ${s.items.length}`, `${count} من ${s.items.length}`)}
+      </span>
     </div>
   );
 
@@ -80,7 +97,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
     const index = section.items.indexOf(item);
     return (
       <ActionMenu
-        name={item.name}
+        name={displayName(item)}
         canUp={!q && index > 0}
         canDown={!q && index < section.items.length - 1}
         onEdit={() => onEdit({ item, sectionKey: section.key, isNew: false })}
@@ -97,11 +114,14 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
   return (
     <div className="page">
       <PageHeader
-        title="Menu items"
-        description="Edit the food and drinks shown on the public website."
+        title={t("Menu items", "أصناف القائمة")}
+        description={t(
+          "Edit the food and drinks shown on the public website.",
+          "عدّل المأكولات والمشروبات المعروضة على الموقع.",
+        )}
         actions={
           <Button icon="plus" onClick={() => onEdit(newItem(shown, filter))}>
-            Add item
+            {t("Add item", "إضافة صنف")}
           </Button>
         }
       />
@@ -113,22 +133,26 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search menu items"
-              aria-label="Search menu items"
+              placeholder={t("Search menu items", "البحث في أصناف القائمة")}
+              aria-label={t("Search menu items", "البحث في أصناف القائمة")}
             />
           </label>
-          <select aria-label="Filter by section" value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="all">All sections</option>
+          <select
+            aria-label={t("Filter by section", "التصفية حسب القسم")}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">{t("All sections", "جميع الأقسام")}</option>
             {shown.map((s) => (
               <option key={s.key} value={s.key}>
-                {s.name}
+                {displayName(s)}
               </option>
             ))}
           </select>
         </div>
         <div className="list-meta">
           <span>
-            <b>{total}</b> items in {shown.length} sections
+            <b>{total}</b> {t(`items in ${shown.length} sections`, `صنف في ${shown.length} قسم`)}
           </span>
         </div>
         {groups.length ? (
@@ -137,11 +161,11 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
               <table>
                 <thead>
                   <tr>
-                    <th>Item</th>
-                    <th className="price-heading">Price</th>
-                    <th>Tags</th>
+                    <th>{t("Item", "الصنف")}</th>
+                    <th className="price-heading">{t("Price", "السعر")}</th>
+                    <th>{t("Tags", "التصنيفات")}</th>
                     <th>
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t("Actions", "الإجراءات")}</span>
                     </th>
                   </tr>
                 </thead>
@@ -155,7 +179,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
                         <tr key={item.key} onClick={() => open(item, section)}>
                           <td>
                             <div className="item-cell">
-                              <Thumbnail item={item} name={item.name} />
+                              <Thumbnail item={item} name={displayName(item)} />
                               <span>
                                 <button
                                   type="button"
@@ -165,9 +189,9 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
                                     open(item, section);
                                   }}
                                 >
-                                  {item.name}
+                                  {displayName(item)}
                                 </button>
-                                {item.options.length > 0 && <small>{item.options.join(" · ")}</small>}
+                                {item.options.length > 0 && <small>{displayOptions(item)}</small>}
                               </span>
                             </div>
                           </td>
@@ -191,7 +215,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
                   {heading(section, items.length)}
                   {items.map((item) => (
                     <article className="item-card" key={item.key} onClick={() => open(item, section)}>
-                      <Thumbnail item={item} name={item.name} />
+                      <Thumbnail item={item} name={displayName(item)} />
                       <div className="card-copy">
                         <button
                           type="button"
@@ -201,10 +225,10 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
                             open(item, section);
                           }}
                         >
-                          {item.name}
+                          {displayName(item)}
                         </button>
                         {item.options.length > 0 && (
-                          <small className="card-choices">{item.options.join(" · ")}</small>
+                          <small className="card-choices">{displayOptions(item)}</small>
                         )}
                         <b>
                           <ItemPrice item={item} />
@@ -223,10 +247,10 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
             <div>
               <Icon name="search" />
             </div>
-            <h2>No items match &apos;{query}&apos;.</h2>
-            <p>Clear the search to see all menu items.</p>
+            <h2>{t(`No items match '${query}'.`, `لا توجد أصناف تطابق «${query}».`)}</h2>
+            <p>{t("Clear the search to see all menu items.", "امسح البحث لعرض جميع أصناف القائمة.")}</p>
             <Button variant="secondary" onClick={() => setQuery("")}>
-              Clear search
+              {t("Clear search", "مسح البحث")}
             </Button>
           </div>
         )}
@@ -234,13 +258,13 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
 
       {pending && (
         <div className="bottom-actions list-save">
-          <span>Unsaved order changes</span>
+          <span>{t("Unsaved order changes", "تغييرات غير محفوظة في الترتيب")}</span>
           <div>
             <Button variant="secondary" onClick={() => setPending(null)} disabled={busy}>
-              Discard
+              {t("Discard", "تجاهل")}
             </Button>
             <Button onClick={() => run(() => publish(pending, "Menu: reorder items"))} disabled={busy}>
-              {busy ? "Publishing…" : "Publish"}
+              {busy ? t("Publishing…", "جارٍ النشر…") : t("Publish", "نشر")}
             </Button>
           </div>
         </div>
@@ -251,7 +275,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
         className={`mobile-fab ${pending ? "raised" : ""}`}
         onClick={() => onEdit(newItem(shown, filter))}
       >
-        <Icon name="plus" /> Add item
+        <Icon name="plus" /> {t("Add item", "إضافة صنف")}
       </button>
 
       {toDelete && (
@@ -259,11 +283,16 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
           <div className="modal-icon danger">
             <Icon name="trash" />
           </div>
-          <h2>Delete {toDelete.name}?</h2>
-          <p>It will disappear from the public menu after it&apos;s published.</p>
+          <h2>{t(`Delete ${displayName(toDelete)}?`, `حذف ${displayName(toDelete)}؟`)}</h2>
+          <p>
+            {t(
+              "It will disappear from the public menu after it's published.",
+              "سيختفي من القائمة العامة بعد النشر.",
+            )}
+          </p>
           <div className="modal-actions">
             <Button variant="secondary" onClick={() => setToDelete(null)} disabled={busy}>
-              Cancel
+              {t("Cancel", "إلغاء")}
             </Button>
             <Button
               variant="danger"
@@ -275,7 +304,7 @@ export function MenuItems({ sections, publish, onEdit, onDelete, setDirty }: Pro
                 })
               }
             >
-              {busy ? "Deleting…" : "Delete and publish"}
+              {busy ? t("Deleting…", "جارٍ الحذف…") : t("Delete and publish", "حذف ونشر")}
             </Button>
           </div>
         </Modal>
@@ -311,6 +340,7 @@ function ActionMenu({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useAdminLanguage();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -344,7 +374,7 @@ function ActionMenu({
         ref={trigger}
         type="button"
         className="icon-button"
-        aria-label={`Actions for ${name}`}
+        aria-label={t(`Actions for ${name}`, `إجراءات ${name}`)}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
@@ -355,24 +385,24 @@ function ActionMenu({
           <button
             type="button"
             className="menu-sheet-scrim"
-            aria-label="Close actions"
+            aria-label={t("Close actions", "إغلاق الإجراءات")}
             onClick={() => setOpen(false)}
           />
           <div className="menu-popover">
             <button type="button" ref={first} onClick={act(onEdit)}>
-              Edit
+              {t("Edit", "تعديل")}
             </button>
             <button type="button" disabled={!canUp} onClick={act(() => onMove(-1))}>
-              Move up
+              {t("Move up", "نقل للأعلى")}
             </button>
             <button type="button" disabled={!canDown} onClick={act(() => onMove(1))}>
-              Move down
+              {t("Move down", "نقل للأسفل")}
             </button>
             <button type="button" onClick={act(onDuplicate)}>
-              Duplicate
+              {t("Duplicate", "إنشاء نسخة")}
             </button>
             <button type="button" className="delete-action" onClick={act(onDelete)}>
-              Delete
+              {t("Delete", "حذف")}
             </button>
           </div>
         </>
