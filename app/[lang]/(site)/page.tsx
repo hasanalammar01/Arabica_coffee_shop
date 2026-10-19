@@ -8,7 +8,7 @@ import { Price } from "@/components/Price";
 import { Gallery, storyParagraphs } from "@/components/Story";
 import { Visit } from "@/components/Visit";
 import type { MenuItem } from "@/data/menu";
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { alternates, href, isLang, pick, t, type Lang } from "@/lib/i18n";
 import { getMenu, publicMenu } from "@/lib/menu";
 import caramelFrappe from "@/public/menu/caramel-frappe.webp";
@@ -30,9 +30,10 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
   const d = t(lang);
-  const menu = publicMenu(getMenu());
+  const [publishedMenu, site] = await Promise.all([getMenu(), getSite()]);
+  const menu = publicMenu(publishedMenu);
   const signature = menu.flatMap((c) => c.items).filter((i) => i.signature);
-  const story = storyParagraphs(lang);
+  const story = storyParagraphs(lang, site);
   const arrow =
     "transition-transform group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1";
 
@@ -137,7 +138,9 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
 
       {story.length > 0 && (
         <section className="mx-auto grid max-w-6xl gap-6 px-4 pt-24 sm:px-6 md:grid-cols-[1fr_1.4fr] md:gap-16">
-          <h2 className="reveal font-display text-title">{pick(lang, site.story.title, site.story.titleAr)}</h2>
+          <h2 className="reveal font-display text-title">
+            {pick(lang, site.story.title, site.story.titleAr)}
+          </h2>
           <div className="reveal space-y-4 text-lg text-muted">
             {story.map((p) => (
               <p key={p}>{p}</p>

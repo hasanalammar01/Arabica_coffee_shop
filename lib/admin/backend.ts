@@ -1,20 +1,20 @@
 /**
- * The admin's link to the server (/api/admin/*). The server holds the GitHub key and
- * decides where files go (lib/admin/store.ts); the browser only ever sees the menu files.
+ * The admin's link to the server (/api/admin/*). The server saves content to Neon and
+ * photos to Blob (or local files in development); credentials stay on the server.
  */
 import type { Page } from "@/lib/admin/permissions";
 import type { DayTotal, Order, OrderStatus, ShopSettings, Totals } from "@/lib/orders-core";
 
 export type FileChange = { path: string; content: string | Blob };
-export type Mode = "github" | "local";
+export type Mode = "database" | "local";
 
 export type Backend = {
   user: { name: string; detail: string };
   /** Shown after a successful publish. */
   afterPublish: string;
   loadJson<T>(path: string): Promise<T>;
-  /** Writes all files at once (one commit). Throws a message ready to show staff. */
-  publish(changes: FileChange[], message: string): Promise<void>;
+  /** Saves content together and returns the final URLs of uploaded photos. */
+  publish(changes: FileChange[], message: string): Promise<Record<string, string>>;
 };
 
 async function api(path: string, init: RequestInit = {}) {
@@ -70,7 +70,7 @@ export const resetPin = (code: string, newPin: string) =>
 
 export const verifyPin = (pin: string) => api("/api/admin/session", { method: "POST", body: JSON.stringify({ pin }) });
 
-/* Online orders and settings (stored in the database, not GitHub). */
+/* Online orders and settings. */
 
 export type OrdersOverview = {
   orders: Order[];
@@ -153,7 +153,7 @@ export function connect(mode: Mode | null, who?: SessionUser): Backend {
     },
     afterPublish: local
       ? "Saved to this computer. The local site updates right away."
-      : "Published. The public menu updates in about a minute.",
+      : "Published. The changes are now live.",
 
     async loadJson<T>(path: string) {
       const res = await api(`/api/admin/files?path=${encodeURIComponent(path)}`);
@@ -173,8 +173,12 @@ export function connect(mode: Mode | null, who?: SessionUser): Backend {
         method: "POST",
         body: JSON.stringify({ message, files, base }),
       });
-      const { versions: next } = (await res.json()) as { versions: Record<string, string> };
+      const { versions: next, images = {} } = (await res.json()) as {
+        versions: Record<string, string>;
+        images?: Record<string, string>;
+      };
       for (const [path, sha] of Object.entries(next)) versions.set(path, sha);
+      return images;
     },
   };
 }

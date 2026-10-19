@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Gallery, storyParagraphs } from "@/components/Story";
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { alternates, href, isLang, pick, t, type Lang } from "@/lib/i18n";
 import brownies from "@/public/menu/brownies.webp";
 import cappuccino from "@/public/menu/cappuccino.webp";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/about">): Promise<Metadata> {
+  const site = await getSite();
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
   return {
@@ -21,7 +22,8 @@ export default async function About({ params }: PageProps<"/[lang]/about">) {
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
   const d = t(lang);
-  const story = storyParagraphs(lang);
+  const site = await getSite();
+  const story = storyParagraphs(lang, site);
   const title = pick(lang, site.story.title, site.story.titleAr) || d.about.title;
 
   return (
@@ -44,7 +46,10 @@ export default async function About({ params }: PageProps<"/[lang]/about">) {
 
           <div className="grid grid-cols-2 gap-4 self-start" aria-hidden>
             {[cappuccino, brownies].map((src, i) => (
-              <div key={src.src} className={`tile flex aspect-[3/4] items-end rounded-card p-5 shadow-lift ${i ? "mt-12" : ""}`}>
+              <div
+                key={src.src}
+                className={`tile flex aspect-[3/4] items-end rounded-card p-5 shadow-lift ${i ? "mt-12" : ""}`}
+              >
                 <Image
                   src={src}
                   alt=""

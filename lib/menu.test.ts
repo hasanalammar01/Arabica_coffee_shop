@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
-import { buildMenu, getMenu, slugify } from "./menu.ts";
+import { menuData } from "../data/menu.ts";
+import { buildMenu, slugify } from "./menu-core.ts";
 
 test("the real menu is valid", () => {
-  const menu = getMenu();
+  const menu = buildMenu(menuData, {
+    imageExists: (path) => !path.startsWith("/") || existsSync(join(process.cwd(), "public", path)),
+  });
   assert.equal(menu.length, 7);
   assert.equal(menu[0].id, "hot-drinks");
 });

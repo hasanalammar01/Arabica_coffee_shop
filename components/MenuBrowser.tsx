@@ -12,7 +12,15 @@ import { Price } from "./Price";
 
 const hasImage = (i: MenuItem): i is MenuItem & { image: string } => Boolean(i.image);
 
-export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }) {
+export function MenuBrowser({
+  menu,
+  lang,
+  phoneBar,
+}: {
+  menu: MenuCategory[];
+  lang: Lang;
+  phoneBar: boolean;
+}) {
   const d = t(lang);
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState<Tag | null>(null);
@@ -211,7 +219,7 @@ export function MenuBrowser({ menu, lang }: { menu: MenuCategory[]; lang: Lang }
           );
         })}
       </div>
-      <CartBar menu={menu} lang={lang} ordering={ordering} />
+      <CartBar menu={menu} lang={lang} ordering={ordering} phoneBar={phoneBar} />
     </ItemInfoGroup>
   );
 }
@@ -232,7 +240,9 @@ function MenuRow({
   const soldOut = item.availability === "soldout";
   const name = pick(lang, item.name, item.nameAr);
   return (
-    <li className={`reveal flex break-inside-avoid items-start gap-2 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}>
+    <li
+      className={`reveal flex break-inside-avoid items-start gap-2 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 ${soldOut ? "opacity-60" : ""}`}
+    >
       <ItemInfo
         itemId={item.id}
         label={`${name}: ${d.menu.details}`}

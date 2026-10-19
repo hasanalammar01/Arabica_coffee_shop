@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
-import { site } from "../data/site.ts";
+import { getSiteData } from "./content-store.ts";
 import {
   summarize,
   withDefaults,
@@ -300,7 +300,7 @@ export async function setOrderStatus(id: number, status: OrderStatus) {
 /** The latest orders plus statistics, for the admin. Cancelled orders don't count as money taken. */
 export async function ordersOverview(limit = 150) {
   const sql = await db();
-  const tz = site.timeZone;
+  const tz = (await getSiteData()).timeZone;
   const [orders, days, [all], [meta]] = await Promise.all([
     sql`select * from orders order by id desc limit ${limit}`,
     sql`select to_char(created_at at time zone ${tz}, 'YYYY-MM-DD') as day,

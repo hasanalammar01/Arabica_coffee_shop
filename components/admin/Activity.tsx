@@ -1,24 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { site } from "@/data/site";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listActivity, type ActivityEntry } from "@/lib/admin/backend";
 import { Button, ErrorBanner, PageHeader } from "./ui";
-
-const when = new Intl.DateTimeFormat("en-GB", {
-  timeZone: site.timeZone,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 // Failed sign-ins and wrong PINs or codes stand out.
 const isWarning = (a: ActivityEntry) => /^(Wrong|Sign-in with an unknown)/.test(a.action);
 
 /** Super admin only: everything done in the admin, newest first (kept 90 days). */
-export function ActivityScreen() {
+export function ActivityScreen({ timeZone }: { timeZone: string }) {
+  const when = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [timeZone],
+  );
   const [entries, setEntries] = useState<ActivityEntry[] | null>(null);
   const [people, setPeople] = useState<string[]>([]);
   const [actor, setActor] = useState("");

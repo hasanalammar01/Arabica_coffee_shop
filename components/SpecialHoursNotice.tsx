@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { site } from "@/data/site";
+import type { Site, SpecialHours } from "@/data/site";
 import { formatDate, formatTime, localTime, specialFor, upcomingSpecials } from "@/lib/hours";
 import { pick, t, type Lang } from "@/lib/i18n";
 
@@ -9,26 +9,25 @@ const subscribe = (tick: () => void) => {
   const id = setInterval(tick, 60_000);
   return () => clearInterval(id);
 };
-const today = () => localTime(new Date(), site.timeZone).date;
 
 /**
  * Today's holiday closure / special hours and the changes coming up in the next 30 days.
  * Worked out in the browser, so a cached page never shows yesterday's notice.
  */
-export function SpecialHoursNotice({ lang }: { lang: Lang }) {
-  const date = useSyncExternalStore(subscribe, today, () => null);
-  if (!date || !site.specialHours.length) return null;
+export function SpecialHoursNotice({ lang, specialHours, timeZone }: Pick<Site, "specialHours" | "timeZone"> & { lang: Lang }) {
+  const date = useSyncExternalStore(subscribe, () => localTime(new Date(), timeZone).date, () => null);
+  if (!date || !specialHours.length) return null;
   const d = t(lang).visit;
-  const now = specialFor(site.specialHours, date);
+  const now = specialFor(specialHours, date);
   const in30 = new Date(`${date}T12:00:00Z`);
   in30.setUTCDate(in30.getUTCDate() + 30);
   const limit = in30.toISOString().slice(0, 10);
-  const next = upcomingSpecials(site.specialHours, date).filter((s) => s !== now && s.from <= limit);
+  const next = upcomingSpecials(specialHours, date).filter((s) => s !== now && s.from <= limit);
   if (!now && !next.length) return null;
 
-  const hoursOf = (s: (typeof site.specialHours)[number]) =>
+  const hoursOf = (s: SpecialHours) =>
     s.closed || !s.open || !s.close ? d.closed : `${formatTime(s.open, lang)} – ${formatTime(s.close, lang)}`;
-  const range = (s: (typeof site.specialHours)[number]) =>
+  const range = (s: SpecialHours) =>
     s.to && s.to !== s.from ? `${formatDate(s.from, lang)} – ${formatDate(s.to, lang)}` : formatDate(s.from, lang);
 
   return (

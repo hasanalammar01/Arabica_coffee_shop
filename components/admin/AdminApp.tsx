@@ -180,7 +180,7 @@ export function AdminApp() {
     setDirty(false);
   };
 
-  /** Validates, uploads new photos and publishes menu.json, all in one commit. */
+  /** Validates content and publishes it with any new photos. */
   const publish: Publish = useCallback(
     async (next, message) => {
       const withIds = next.map((s) => ({
@@ -209,8 +209,14 @@ export function AdminApp() {
         }),
       }));
       files.push({ path: "data/menu.json", content: toJsonFile(toMenuJson(withPhotos)) });
-      await backend!.publish(files, message);
-      setSections(withPhotos);
+      const images = await backend!.publish(files, message);
+      setSections(withPhotos.map((section) => ({
+        ...section,
+        items: section.items.map((item) => {
+          if (item.preview?.startsWith("blob:")) URL.revokeObjectURL(item.preview);
+          return { ...item, image: images[item.image] ?? item.image, preview: undefined };
+        }),
+      })));
       setNotice(backend!.afterPublish);
     },
     [backend],
@@ -325,11 +331,11 @@ export function AdminApp() {
         </div>
       ) : (
         <>
-          {screen === "orders" && <OrdersScreen data={orders.data} error={orders.error} onStatus={orders.setStatus} />}
+          {screen === "orders" && <OrdersScreen data={orders.data} error={orders.error} timeZone={site.timeZone} onStatus={orders.setStatus} />}
           {screen === "stats" && <StatsScreen data={orders.data} error={orders.error} />}
           {screen === "payments" && <PaymentsScreen setDirty={setDirty} onSaved={setNotice} />}
           {screen === "settings" && <SettingsScreen setDirty={setDirty} onSaved={setNotice} pages={pages} />}
-          {screen === "activity" && isAdmin && <ActivityScreen />}
+          {screen === "activity" && isAdmin && <ActivityScreen timeZone={site.timeZone} />}
         </>
       )}
     </AppShell>

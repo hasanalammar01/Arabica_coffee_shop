@@ -18,5 +18,5 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/order">): 
 export default async function OrderPage({ params }: PageProps<"/[lang]/order">) {
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
-  return <Checkout menu={publicMenu(getMenu())} lang={lang} />;
+  return <Checkout menu={publicMenu(await getMenu())} lang={lang} />;
 }

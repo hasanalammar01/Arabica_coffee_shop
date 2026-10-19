@@ -39,11 +39,11 @@ export type DraftItem = {
   addon: boolean;
   availability: Availability;
   signature: boolean;
-  /** Published photo path, e.g. "/menu/espresso.webp", or "". */
+  /** Published local photo path or public Blob URL, or "". */
   image: string;
   /** A newly chosen photo, uploaded with the next publish. */
   upload?: Blob;
-  /** Object URL to show a new photo before the site has redeployed. */
+  /** Object URL to show a new photo before it is published. */
   preview?: string;
 };
 

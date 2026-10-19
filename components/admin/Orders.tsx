@@ -1,21 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { site } from "@/data/site";
+import { useMemo, useState } from "react";
 import type { OrdersOverview } from "@/lib/admin/backend";
 import { lineLabel, type Order, type OrderStatus, type Totals } from "@/lib/orders-core";
 import { ErrorBanner, PageHeader } from "./ui";
 
 const money = (n: number) => `${n.toLocaleString("en-US")} L.L`;
-const when = new Intl.DateTimeFormat("en-GB", {
-  timeZone: site.timeZone,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
 const STATUS_LABEL: Record<OrderStatus, string> = {
   new: "New",
   accepted: "Accepted",
@@ -34,8 +24,8 @@ type Filter = keyof typeof FILTERS;
 export function NoDatabase() {
   return (
     <div className="info-banner">
-      The orders database isn&apos;t connected yet. In Vercel → Storage, connect the Neon database to this project,
-      then redeploy.
+      The orders database isn&apos;t connected yet. In Vercel → Storage, connect the Neon database to this
+      project, then redeploy.
     </div>
   );
 }
@@ -43,12 +33,26 @@ export function NoDatabase() {
 export function OrdersScreen({
   data,
   error,
+  timeZone,
   onStatus,
 }: {
   data: OrdersOverview | null;
   error: string;
+  timeZone: string;
   onStatus: (id: number, status: OrderStatus) => Promise<void>;
 }) {
+  const when = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone,
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [timeZone],
+  );
   const [filter, setFilter] = useState<Filter>("active");
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
@@ -73,7 +77,9 @@ export function OrdersScreen({
         title="Orders"
         description="New orders appear here by themselves, with a sound. Keep this page open during service."
       />
-      {(error || actionError) && <ErrorBanner message={actionError || error} onClose={() => setActionError("")} />}
+      {(error || actionError) && (
+        <ErrorBanner message={actionError || error} onClose={() => setActionError("")} />
+      )}
       <div className="segmented" role="group" aria-label="Show orders">
         {(Object.keys(FILTERS) as Filter[]).map((f) => (
           <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -91,14 +97,30 @@ export function OrdersScreen({
       )}
       <div className="order-list">
         {shown.map((o) => (
-          <OrderCard key={o.id} order={o} busy={busy === o.id} onStatus={(s) => change(o.id, s)} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            when={when}
+            busy={busy === o.id}
+            onStatus={(s) => change(o.id, s)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function OrderCard({ order: o, busy, onStatus }: { order: Order; busy: boolean; onStatus: (s: OrderStatus) => void }) {
+function OrderCard({
+  order: o,
+  when,
+  busy,
+  onStatus,
+}: {
+  order: Order;
+  when: Intl.DateTimeFormat;
+  busy: boolean;
+  onStatus: (s: OrderStatus) => void;
+}) {
   const phone = o.phone.replace(/[^\d+]/g, "");
   return (
     <article className={`order-card panel ${o.status}`}>
@@ -161,7 +183,12 @@ function OrderCard({ order: o, busy, onStatus }: { order: Order; busy: boolean; 
       </dl>
       {(o.status === "new" || o.status === "accepted") && (
         <footer>
-          <button type="button" className="button secondary" disabled={busy} onClick={() => onStatus("cancelled")}>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() => onStatus("cancelled")}
+          >
             Cancel order
           </button>
           <button

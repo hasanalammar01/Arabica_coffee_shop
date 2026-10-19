@@ -1,6 +1,6 @@
 /**
- * Shop details. The values live in data/site.json, edited in the admin under
- * "Shop info" and "Story & photos". Empty fields are hidden on the site.
+ * Shop types and bundled initial content. Live values are stored in Neon and edited
+ * in the admin. Without a database, development uses data/site.json.
  * The owner must supply: address, contacts, real opening hours, story and photos.
  */
 import { safeHttpUrl } from "../lib/url.ts";

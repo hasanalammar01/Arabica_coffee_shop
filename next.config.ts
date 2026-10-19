@@ -12,7 +12,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' https://plausible.io${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com",
   "font-src 'self' data:",
   `connect-src 'self' https://plausible.io${dev ? " ws:" : ""}`,
   "frame-src https://www.google.com",
@@ -28,7 +28,13 @@ const csp = [
 const nextConfig: NextConfig = {
   // Don't advertise the framework and its version in every response.
   poweredByHeader: false,
-  images: { formats: ["image/avif", "image/webp"] },
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/menu/**", search: "" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/photos/**", search: "" },
+    ],
+  },
   turbopack: { root: import.meta.dirname },
   // One 404 page for the whole app: the public site and the admin have separate root layouts.
   experimental: { globalNotFound: true },

@@ -1,11 +1,11 @@
 # Arabica deli-café website
 
-Next.js 16 (App Router) + TypeScript + Tailwind CSS 4. Every page is static, so it is fast and cheap to host.
+Next.js 16 (App Router) + TypeScript + Tailwind CSS 4. Menu and shop information are read from Neon at request time, so admin publishes go live without a rebuild. New menu photos use Vercel Blob.
 
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm run build      # production build (fails if the menu data is invalid)
+npm run build      # production build
 npm run lint && npm run typecheck && npm test
 ```
 
@@ -17,7 +17,7 @@ Staff manage the menu at `https://your-domain/admin`, a dashboard built from the
 - **Sections:** rename, reorder, add and delete sections. A section with items can't be deleted, and a new section stays hidden on the site until it has an item.
 - **Shop info:** address, Google Maps link, phone, WhatsApp, Instagram, email and opening hours (`data/site.json`).
 
-Clicking **Publish** saves one commit to GitHub (menu and any new photo together), and the live site updates about a minute later. Before publishing, the admin checks the whole menu (every item needs a name and a price) and explains what to fix. If someone else published in the meantime, it stops and asks you to reload instead of overwriting their work. Uploaded photos are resized to 800px WebP in the browser, so a phone photo of several MB becomes about 100 KB.
+Clicking **Publish** saves the menu or shop information to Neon. New photos are uploaded to Vercel Blob and their URLs are saved with the menu. The next public page request uses the new content; publishing needs no GitHub token or redeployment. The server validates the menu and rejects conflicting edits instead of overwriting another staff member's work. Uploaded photos are resized to 800px WebP in the browser, so a phone photo of several MB becomes about 100 KB.
 
 Tags (`Vegan`, `New`…) turn on the filter buttons on the public menu automatically.
 
@@ -27,27 +27,23 @@ Tags (`Vegan`, `New`…) turn on the filter buttons on the public menu automatic
 npm run dev
 ```
 
-Open http://localhost:3000/admin. With no `ADMIN_PASSWORD` set, it opens without a login and **Publish** writes straight to `data/menu.json` / `data/site.json` (photos go to `public/menu/`), so http://localhost:3000/menu updates right away. Nothing is sent to GitHub until you commit.
+Open http://localhost:3000/admin. With no `ADMIN_PASSWORD` set, it opens without a login. With no `DATABASE_URL`, development publishes write to `data/menu.json` / `data/site.json` and `public/menu/`. With `DATABASE_URL`, both the local site and admin use that Neon database; use a development branch to keep test edits separate from production. New photos in database mode require Blob credentials too.
 
 ### Go live (one-time setup)
 
-Staff sign in with a username and password (username `admin` and `ADMIN_PASSWORD` until they're changed in **Settings**); they don't need a GitHub account. When they publish, the website itself saves the change to this GitHub repository using a key that only the server knows. Every change is a commit, so nothing is ever lost and any change can be undone.
+Staff sign in with a username and password (username `admin` and `ADMIN_PASSWORD` until changed in **Settings**). Content is stored in Neon; GitHub is used only to deploy code changes.
 
-1. Deploy the repository on Vercel (Import → `hasanalammar01/Arabica_coffee_shop`).
-2. Create the website's GitHub key: GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-   - Repository access: **Only select repositories** → `Arabica_coffee_shop`.
-   - Permissions: **Contents → Read and write** (nothing else).
-   - Expiration: pick a date and set a reminder; when it expires, publishing stops with a clear message until you paste a new token.
-3. In Vercel → Project → **Settings → Environment Variables**, add (see `.env.example`):
-   - `ADMIN_PASSWORD`: the first admin password (username `admin`). Use a long one (four or more random words). Once it's changed in the admin's Settings, the new one (stored hashed in the database) is used instead.
-   - `GITHUB_TOKEN`: the key from step 2.
-4. Redeploy (Vercel → Deployments → ⋯ → Redeploy) so the new variables take effect.
+1. Connect the existing Neon database to the Vercel project for Production and Preview. The app uses `DATABASE_URL`.
+2. Create a **public Blob** store and connect it to the same project. Keep the default `BLOB` environment-variable prefix. The SDK uses the connected store's OIDC credentials on Vercel; a server-side `BLOB_READ_WRITE_TOKEN` is also supported for local development.
+3. Set `ADMIN_PASSWORD` for the first super admin login. Once changed in Settings, the database's hashed password takes over.
+4. Deploy this version once. On the first content read, the app creates a separate `site_content` table and imports the bundled menu and shop information **only if the row is absent**. Existing Neon orders, staff accounts and settings are unchanged. Later deployments never overwrite saved menu content.
+5. In the admin, test a price change, sold-out item and photo upload. Check the public menu and checkout. Subsequent content publishes require no deployment. The old `GITHUB_TOKEN` can be removed; this version never uses it.
 
-The repository and branch are set in `lib/admin/store.ts` (`REPO`, `BRANCH`).
+The seed is the menu and shop information in the version being deployed. Bring those files up to date before the first migration if the repository has newer published content. Existing photos under `public/menu/` stay available; new uploads go to Blob.
 
 ### Staff accounts
 
-The super admin (the login above, with the PIN) creates staff accounts in **Settings → Staff accounts**: a username, a password (10+ characters) and the pages they can open. New accounts get Menu items, Sections, Shop info and Orders; Statistics, Payment methods and Settings are off until ticked. Staff sign in on the same `/admin` page (no PIN step) and every staff member can change their own password under Settings. Staff can never manage staff accounts or change the super admin's login, PIN or the WhatsApp number, even with Settings access. The server enforces all of this on every request (`lib/admin/permissions.ts`, `lib/admin/guard.ts`); changing, disabling or deleting an account signs that person out, and menu commits record who published them.
+The super admin (the login above, with the PIN) creates staff accounts in **Settings → Staff accounts**: a username, a password (10+ characters) and the pages they can open. New accounts get Menu items, Sections, Shop info and Orders; Statistics, Payment methods and Settings are off until ticked. Staff sign in on the same `/admin` page (no PIN step) and every staff member can change their own password under Settings. Staff can never manage staff accounts or change the super admin's login, PIN or the WhatsApp number, even with Settings access. The server enforces all of this on every request (`lib/admin/permissions.ts`, `lib/admin/guard.ts`); changing, disabling or deleting an account signs that person out, and the activity log records who published changes.
 
 Accounts live in the `staff` table (passwords hashed with scrypt), never in this repository.
 
@@ -69,7 +65,7 @@ update settings set data = data - 'pinHash' - 'pinReset' where id = 1;
 
 ### Editing the file directly
 
-The admin edits `data/menu.json`, which can also be edited by hand:
+Without a database, local development edits `data/menu.json`, which can also be edited by hand. In database mode these JSON files are the initial seed only; edit the live content through the admin:
 
 ```json
 { "name": "Iced Latte", "price": 400000, "image": "/menu/iced-latte.webp" }
@@ -77,7 +73,7 @@ The admin edits `data/menu.json`, which can also be edited by hand:
 
 Optional fields: `description`, `options` (`["Peach", "Lemon"]`), `sizes` (`[{ "size": "Large", "price": 450000 }]`, replaces `price`), `tags` (`vegan`, `gluten-free`, `spicy`, `new`, `bestseller`), `addon` (`true`), `image` (path under `public/`). Links to each section (`/menu#cold-drinks`) are made from the section name.
 
-`npm run build` and `npm test` check the menu and list every problem: missing name or price, unknown tag, photo not found.
+`npm test` validates the bundled seed. Every admin publish validates live menu data on the server before saving it.
 
 ### Open questions from the PDF
 
@@ -108,7 +104,7 @@ A notification that fails never loses an order: it's already saved and shows in 
 
 ## Shop details and opening hours
 
-Edit them in the admin under **Shop info**, or by hand in **`data/site.json`** (also holds the site's domain, `url`). Empty fields are hidden on the site. The Google Maps field takes a pasted link (opens directly) or a place name (also shows an embedded map on the contact page). Hours use 24h time, days are 0 = Sunday … 6 = Saturday, and a closing time earlier than the opening time means "after midnight":
+Edit them in the admin under **Shop info**. In database mode changes save to Neon; `data/site.json` supplies the initial values and local development without a database. Empty fields are hidden on the site. The Google Maps field takes a pasted link (opens directly) or a place name (also shows an embedded map on the contact page). Hours use 24h time, days are 0 = Sunday … 6 = Saturday, and a closing time earlier than the opening time means "after midnight":
 
 ```json
 "hours": [
@@ -127,7 +123,7 @@ Fonts are loaded in `app/layout.tsx` with `next/font` (Young Serif for headings,
 
 ## Images
 
-- Menu photos live in `public/menu/` (WebP or PNG; transparent cut-outs look best on the brown tiles). Upload them in the admin, or reference them from `data/menu.json`. Next.js resizes and converts them automatically.
+- Existing menu photos live in `public/menu/`. New admin uploads use Vercel Blob in database mode, or `public/menu/` in local mode. Next.js resizes and converts the images automatically.
 - The photos currently on the site were extracted from the PDF and are about 250px wide. Higher-resolution versions (800px+) will look sharper on phones.
 - The logo is `public/logo.svg` (full) and `public/logo-mark.svg` (Arabic only), extracted from the PDF as vectors.
 - `public/arabica-menu.pdf` is the "Download PDF menu" file. Replace it whenever the printed menu changes, or remove the button in `app/menu/page.tsx`.
@@ -150,7 +146,7 @@ Set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=your-domain.com` in the hosting dashboard to t
 - **Vercel:** import the repository, no settings needed.
 - **Netlify:** import the repository; it detects Next.js automatically.
 
-After the first deploy, set `url` in `data/site.json` to the live domain (used for SEO, the sitemap and the QR code) and redeploy.
+Set `url` in `data/site.json` to the live domain before the initial database seed. Subsequent live shop information is stored in Neon. The QR generator reads the bundled seed file, so pass the current live menu URL explicitly when generating a new code if it has changed.
 
 ## What's where
 

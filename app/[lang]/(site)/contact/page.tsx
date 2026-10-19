@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Visit } from "@/components/Visit";
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { mapsIsLink } from "@/lib/contact";
 import { alternates, isLang, t, type Lang } from "@/lib/i18n";
 
@@ -12,13 +12,14 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/contact">)
 }
 
 export default async function Contact({ params }: PageProps<"/[lang]/contact">) {
+  const site = await getSite();
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-14">
       <Visit lang={lang} headingLevel="h1" />
       {/* Shared links (maps.app.goo.gl/…) can't be embedded, only searches can. */}
-      {site.mapsQuery && !mapsIsLink && (
+      {site.mapsQuery && !mapsIsLink(site.mapsQuery) && (
         <iframe
           title={t(lang).visit.map}
           src={`https://www.google.com/maps?q=${encodeURIComponent(site.mapsQuery)}&output=embed&hl=${lang}`}

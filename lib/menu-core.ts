@@ -10,6 +10,8 @@ import {
   type Modifier,
   type Tag,
 } from "../data/menu.ts";
+import { isSiteImage } from "./images.ts";
+export { IMAGE_PATH } from "./images.ts";
 
 /** "Caffè Latte" → "caffe-latte". Names with no Latin letters fall back to `fallback`. */
 export const slugify = (s: string, fallback: string) =>
@@ -27,8 +29,6 @@ const strings = (v: unknown) =>
   list(Array.isArray(v) ? v.map((s) => (typeof s === "string" ? s.trim() : "")).filter(Boolean) : undefined);
 const int = (v: unknown, fallback: number) => (typeof v === "number" && Number.isInteger(v) ? v : fallback);
 
-/** Photos must be site files under /menu/ or /photos/. */
-export const IMAGE_PATH = /^\/(menu|photos)\/[a-z0-9][a-z0-9-]*\.(webp|png|jpe?g)$/;
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
@@ -97,7 +97,7 @@ export function buildMenu(
         errors.push(`${where}: availability must be available, soldout or hidden`);
 
       const image = text(i.image);
-      if (image && !IMAGE_PATH.test(image)) errors.push(`${where}: image "${image}" isn't a site photo path`);
+      if (image && !isSiteImage(image)) errors.push(`${where}: image "${image}" isn't a supported site photo`);
       else if (image && !imageExists(image)) errors.push(`${where}: image "${image}" not found in /public`);
 
       const modifiers = (list(i.modifiers) ?? []).map((m, mi): Modifier => {

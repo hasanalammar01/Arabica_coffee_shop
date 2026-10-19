@@ -1,7 +1,15 @@
 /*
  * Staff dashboard styles, ported from the approved Figma Make design ("Staff dashboard design").
- * Everything is scoped under .admin so nothing leaks into the public site.
+ * Everything is scoped to .admin-root or .admin so nothing leaks into the public site.
  */
+/* Paint the scroll canvas too, and prevent overscroll from exposing the page behind it. */
+html.admin-root,
+html.admin-root body {
+  background: #f6f0e7;
+  color-scheme: light;
+  overscroll-behavior-y: none;
+}
+
 .admin {
   --paper: #f6f0e7;
   --white: #ffffff;
@@ -2068,7 +2076,11 @@ html:has(.admin .mobile-header) {
   }
   & .credentials-card dd {
     margin: 0;
-    font: 600 16px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font:
+      600 16px/1.4 ui-monospace,
+      "Cascadia Mono",
+      Consolas,
+      monospace;
     letter-spacing: 0.04em;
   }
   & .credentials-card > div {
@@ -2205,7 +2217,9 @@ html:has(.admin .mobile-header) {
   }
   & .order-card.new {
     border-color: var(--caramel);
-    box-shadow: 0 0 0 1px var(--caramel), 0 8px 24px rgba(138, 90, 43, 0.12);
+    box-shadow:
+      0 0 0 1px var(--caramel),
+      0 8px 24px rgba(138, 90, 43, 0.12);
   }
   & .order-card.done,
   & .order-card.cancelled {
@@ -2236,7 +2250,10 @@ html:has(.admin .mobile-header) {
   & .status-badge {
     padding: 2px 9px;
     border-radius: 999px;
-    font: 600 11px var(--font-readex), system-ui, sans-serif;
+    font:
+      600 11px var(--font-readex),
+      system-ui,
+      sans-serif;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }

@@ -1,11 +1,12 @@
-import { site } from "@/data/site";
-import { contactActions, isExternal } from "@/lib/contact";
+import { getContactActions, isExternal } from "@/lib/contact";
 import { formatDays, formatTime } from "@/lib/hours";
 import { pick, t, type Lang } from "@/lib/i18n";
+import { getSite } from "@/lib/site";
 import { OpenStatus } from "./OpenStatus";
 import { SpecialHoursNotice } from "./SpecialHoursNotice";
 
-export function HoursTable({ lang }: { lang: Lang }) {
+export async function HoursTable({ lang }: { lang: Lang }) {
+  const site = await getSite();
   if (!site.hours.length) return <p className="text-muted">{t(lang).visit.hoursSoon}</p>;
   return (
     <dl className="divide-y divide-line border-y border-line">
@@ -21,7 +22,8 @@ export function HoursTable({ lang }: { lang: Lang }) {
   );
 }
 
-export function ContactActions({ lang }: { lang: Lang }) {
+export async function ContactActions({ lang }: { lang: Lang }) {
+  const contactActions = getContactActions(await getSite());
   if (!contactActions.length) return null;
   const d = t(lang).visit;
   const label = { call: d.call, whatsapp: d.whatsapp, directions: d.directions, instagram: d.instagram, email: d.email };
@@ -44,7 +46,9 @@ export function ContactActions({ lang }: { lang: Lang }) {
   );
 }
 
-export function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLevel?: "h1" | "h2" }) {
+export async function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLevel?: "h1" | "h2" }) {
+  const site = await getSite();
+  const contactActions = getContactActions(site);
   const d = t(lang).visit;
   const address = pick(lang, site.address ?? "", site.addressAr);
   return (
@@ -52,9 +56,9 @@ export function Visit({ lang, headingLevel: H = "h2" }: { lang: Lang; headingLev
       <div className="reveal">
         <div className="flex flex-wrap items-center gap-3">
           <H className="font-display text-title">{d.hours}</H>
-          <OpenStatus lang={lang} />
+          <OpenStatus lang={lang} hours={site.hours} specialHours={site.specialHours} timeZone={site.timeZone} />
         </div>
-        <SpecialHoursNotice lang={lang} />
+        <SpecialHoursNotice lang={lang} specialHours={site.specialHours} timeZone={site.timeZone} />
         <div className="mt-6">
           <HoursTable lang={lang} />
         </div>

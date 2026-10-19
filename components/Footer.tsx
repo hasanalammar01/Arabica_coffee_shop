@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { href, pick, t, type Lang } from "@/lib/i18n";
 import { Logo } from "./Logo";
 
-export function Footer({ lang }: { lang: Lang }) {
+export async function Footer({ lang }: { lang: Lang }) {
+  const site = await getSite();
   const d = t(lang);
   const link = "inline-flex min-h-11 min-w-11 items-center hover:text-on-espresso";
   return (

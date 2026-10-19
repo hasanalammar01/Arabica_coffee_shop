@@ -1,7 +1,7 @@
 /**
- * Menu types. The menu itself lives in data/menu.json, edited through the admin
- * at /admin (or by hand). lib/menu-core.ts validates it (in the build, and on the
- * server before every admin publish) and lists every problem it finds.
+ * Menu types and bundled initial content. Live menu data is stored in Neon and
+ * edited through /admin; without a database, development uses data/menu.json.
+ * lib/menu-core.ts validates it before every admin publish.
  */
 import data from "./menu.json" with { type: "json" };
 
@@ -70,7 +70,7 @@ export type MenuItemData = {
   availability?: string | Empty;
   /** Featured on the home page. */
   signature?: boolean | Empty;
-  /** Path under /public. Items without an image render as a text row. */
+  /** Local asset path or public Blob URL. Without an image, render as a text row. */
   image?: string | null;
 };
 

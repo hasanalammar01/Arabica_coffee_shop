@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import Script from "next/script";
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { dir, href, isLang, LANGS, pick, t, type Lang } from "@/lib/i18n";
 import { scriptJson } from "@/lib/script-json";
 import { fontVars } from "../fonts";
 import "../globals.css";
-
 
 export const dynamicParams = false;
 export const generateStaticParams = () => LANGS.map((lang) => ({ lang }));
 
 export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Promise<Metadata> {
   const { lang } = await params;
+  const site = await getSite();
   const l = (isLang(lang) ? lang : "en") as Lang;
   const name = pick(l, site.name, site.nameAr);
   return {
@@ -41,6 +41,7 @@ const analyticsDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
 export default async function RootLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isLang(lang)) notFound();
+  const site = await getSite();
   const d = t(lang);
 
   const jsonLd = {
@@ -76,11 +77,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   };
 
   return (
-    <html
-      lang={lang}
-      dir={dir(lang)}
-      className={fontVars}
-    >
+    <html lang={lang} dir={dir(lang)} className={fontVars}>
       <body className="flex min-h-dvh flex-col font-sans antialiased">
         <a
           href="#main"

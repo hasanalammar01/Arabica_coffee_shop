@@ -3,17 +3,13 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { currency, type MenuCategory } from "@/data/menu";
-import { contactActions } from "@/lib/contact";
 import { formatAmount } from "@/lib/format";
 import { href, t, type Lang } from "@/lib/i18n";
 import { menuItems, priceLine } from "@/lib/orders-core";
 import { useCart, type OrderingConfig } from "./cart";
 
-// The phone action bar (MobileActions) shows when any of these are filled in; sit above it.
-const phoneBar = contactActions.some((a) => a.kind === "call" || a.kind === "whatsapp" || a.kind === "directions");
-
 /** "3 items · 1,200,000 L.L → View your order", floating at the bottom while the cart has something. */
-export function CartBar({ menu, lang, ordering }: { menu: MenuCategory[]; lang: Lang; ordering: OrderingConfig | null }) {
+export function CartBar({ menu, lang, ordering, phoneBar }: { menu: MenuCategory[]; lang: Lang; ordering: OrderingConfig | null; phoneBar: boolean }) {
   const d = t(lang).order;
   const lines = useCart();
   const items = useMemo(() => menuItems(menu), [menu]);

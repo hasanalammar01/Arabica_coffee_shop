@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { site } from "@/data/site";
+import type { Site } from "@/data/site";
 import { localTime, openNow } from "@/lib/hours";
 import { t, type Lang } from "@/lib/i18n";
 
@@ -10,17 +10,19 @@ const subscribe = (tick: () => void) => {
   return () => clearInterval(id);
 };
 
-// A string snapshot so React can compare it between renders.
-const getState = () => {
-  const s = openNow(site.hours, site.specialHours, localTime(new Date(), site.timeZone));
-  return s.open ? "open" : "closed";
-};
-
 /** "Open now" / "Closed now", computed in the visitor's browser against Beirut time, holidays included. */
-export function OpenStatus({ lang, className = "" }: { lang: Lang; className?: string }) {
-  // null on the server: the page is static, so the real time is only known in the browser.
+export function OpenStatus({
+  lang,
+  hours,
+  specialHours,
+  timeZone,
+  className = "",
+}: Pick<Site, "hours" | "specialHours" | "timeZone"> & { lang: Lang; className?: string }) {
+  // A string snapshot so React can compare it; null avoids a server/client clock mismatch.
+  const getState = () =>
+    openNow(hours, specialHours, localTime(new Date(), timeZone)).open ? "open" : "closed";
   const state = useSyncExternalStore(subscribe, getState, () => null);
-  if (!site.hours.length && !site.specialHours.length) return null;
+  if (!hours.length && !specialHours.length) return null;
   const d = t(lang).visit;
   const open = state === "open";
   return (

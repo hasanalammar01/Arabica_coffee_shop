@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MenuBrowser } from "@/components/MenuBrowser";
 import { currency } from "@/data/menu";
-import { site } from "@/data/site";
+import { getContactActions } from "@/lib/contact";
 import { alternates, href, isLang, pick, t, type Lang } from "@/lib/i18n";
 import { getMenu, publicMenu } from "@/lib/menu";
 import { scriptJson } from "@/lib/script-json";
+import { getSite } from "@/lib/site";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/menu">): Promise<Metadata> {
   const { lang: l } = await params;
@@ -18,7 +19,11 @@ export default async function MenuPage({ params }: PageProps<"/[lang]/menu">) {
   const { lang: l } = await params;
   const lang: Lang = isLang(l) ? l : "en";
   const d = t(lang);
-  const menu = publicMenu(getMenu());
+  const [publishedMenu, site] = await Promise.all([getMenu(), getSite()]);
+  const menu = publicMenu(publishedMenu);
+  const phoneBar = getContactActions(site).some(
+    (a) => a.kind === "call" || a.kind === "whatsapp" || a.kind === "directions",
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -33,13 +38,14 @@ export default async function MenuPage({ params }: PageProps<"/[lang]/menu">) {
         "@type": "MenuItem",
         name: pick(lang, i.name, i.nameAr),
         description: pick(lang, i.description ?? "", i.descriptionAr) || undefined,
-        image: i.image && `${site.url}${i.image}`,
+        image: i.image && new URL(i.image, site.url).href,
         offers: i.prices.map(([size, price]) => ({
           "@type": "Offer",
           name: size || undefined,
           price,
           priceCurrency: currency.code,
-          availability: i.availability === "soldout" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+          availability:
+            i.availability === "soldout" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
         })),
       })),
     })),
@@ -61,7 +67,7 @@ export default async function MenuPage({ params }: PageProps<"/[lang]/menu">) {
           </Link>
         </div>
       </div>
-      <MenuBrowser menu={menu} lang={lang} />
+      <MenuBrowser menu={menu} lang={lang} phoneBar={phoneBar} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: scriptJson(jsonLd) }} />
     </>
   );

@@ -1,6 +1,6 @@
 import { after, NextResponse } from "next/server";
-import { menuData } from "@/data/menu";
-import { site } from "@/data/site";
+import type { SiteData } from "@/data/site";
+import { getMenuData, getSiteData } from "@/lib/content-store";
 import { addOrder, clientKey, dbConfigured, getSettings, limited, recordHit } from "@/lib/db";
 import { localTime, openNow } from "@/lib/hours";
 import { buildMenu, publicMenu } from "@/lib/menu-core";
@@ -8,12 +8,8 @@ import { readJson } from "@/lib/http";
 import { notifyAdmin } from "@/lib/notify";
 import { orderMessage, paymentReady, validateOrder, type PublicPayment } from "@/lib/orders-core";
 
-// Prices only: photos were already checked at build time, and checking public/ here
-// would bundle every image into this function.
-const menu = publicMenu(buildMenu(menuData));
-
 /** Orders are taken during opening hours (or any time if no hours are set yet). */
-const shopOpen = () =>
+const shopOpen = (site: SiteData) =>
   (!site.hours.length && !site.specialHours.length) ||
   openNow(site.hours, site.specialHours, localTime(new Date(), site.timeZone)).open;
 
@@ -22,10 +18,13 @@ const ORDERS_PER_10_MIN = 5;
 
 /** Public: is online ordering on, is the shop open, and which payment methods to offer. */
 export async function GET() {
-  const settings = dbConfigured() ? await getSettings() : null;
+  const [settings, site] = await Promise.all([dbConfigured() ? getSettings() : null, getSiteData()]);
   // Only complete, enabled methods; every field here is meant for customers.
   const payments: PublicPayment[] = (settings?.payments ?? []).filter(paymentReady);
-  return NextResponse.json({ enabled: Boolean(settings?.ordersEnabled), open: shopOpen(), payments }, noStore);
+  return NextResponse.json(
+    { enabled: Boolean(settings?.ordersEnabled), open: shopOpen(site), payments },
+    noStore,
+  );
 }
 
 /** Public: place an order. Prices are recomputed from the menu; the browser's are ignored. */
@@ -36,10 +35,14 @@ export async function POST(req: Request) {
   if (!dbConfigured()) return NextResponse.json({ error: "disabled" }, { status: 503 });
 
   const key = clientKey(req.headers, "order");
-  if (await limited(key, ORDERS_PER_10_MIN, 10)) return NextResponse.json({ error: "tooMany" }, { status: 429 });
+  if (await limited(key, ORDERS_PER_10_MIN, 10))
+    return NextResponse.json({ error: "tooMany" }, { status: 429 });
 
-  const settings = await getSettings();
-  const result = validateOrder(await readJson(req, 20_000), { menu, settings, open: shopOpen() });
+  const [settings, menuData, site] = await Promise.all([getSettings(), getMenuData(), getSiteData()]);
+  // Read current prices and availability for every checkout. Checking image files here would
+  // bundle the photos into the ordering function; content is already validated on publish.
+  const menu = publicMenu(buildMenu(menuData));
+  const result = validateOrder(await readJson(req, 20_000), { menu, settings, open: shopOpen(site) });
   if ("error" in result) return NextResponse.json(result, { status: 400 });
 
   const order = await addOrder(result.order);

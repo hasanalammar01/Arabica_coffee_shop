@@ -1,11 +1,12 @@
-import { site } from "@/data/site";
+import { getSite } from "@/lib/site";
 import { pick, t, type Lang } from "@/lib/i18n";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { MobileActions } from "./MobileActions";
 
 /** Header, footer and the mobile action bar for the public pages (the admin has its own shell). */
-export function SiteLayout({ lang, children }: { lang: Lang; children: React.ReactNode }) {
+export async function SiteLayout({ lang, children }: { lang: Lang; children: React.ReactNode }) {
+  const site = await getSite();
   const d = t(lang);
   return (
     <>

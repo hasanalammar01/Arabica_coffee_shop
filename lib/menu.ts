@@ -1,10 +1,12 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { menuData } from "../data/menu.ts";
+import { cache } from "react";
+import { connection } from "next/server";
+import { getMenuData } from "./content-store.ts";
 import { buildMenu } from "./menu-core.ts";
 
 export { buildMenu, publicMenu, slugify } from "./menu-core.ts";
 
-/** The validated menu for the site. Runs at build time, so a broken menu fails the build. */
-export const getMenu = () =>
-  buildMenu(menuData, { imageExists: (path) => existsSync(join(process.cwd(), "public", path)) });
+/** Read the current published menu once per render, without caching it between requests. */
+export const getMenu = cache(async () => {
+  await connection();
+  return buildMenu(await getMenuData());
+});

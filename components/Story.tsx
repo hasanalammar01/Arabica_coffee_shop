@@ -1,9 +1,10 @@
 import Image from "next/image";
-import { site } from "@/data/site";
+import type { Site } from "@/data/site";
 import { pick, type Lang } from "@/lib/i18n";
+import { getSite } from "@/lib/site";
 
 /** The café story from the admin, split into paragraphs at blank lines. */
-export function storyParagraphs(lang: Lang) {
+export function storyParagraphs(lang: Lang, site: Pick<Site, "story">) {
   return pick(lang, site.story.body, site.story.bodyAr)
     .split(/\n\s*\n/)
     .map((p) => p.trim())
@@ -11,7 +12,8 @@ export function storyParagraphs(lang: Lang) {
 }
 
 /** Café photos uploaded in the admin. Renders nothing until there are some. */
-export function Gallery({ lang, title }: { lang: Lang; title: string }) {
+export async function Gallery({ lang, title }: { lang: Lang; title: string }) {
+  const site = await getSite();
   if (!site.gallery.length) return null;
   return (
     <section aria-label={title} className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
